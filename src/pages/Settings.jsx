@@ -108,23 +108,7 @@ const Settings = () => {
       payload.password = formData.newPassword.trim();
     }
 
-    let uploadedAvatarUrl = avatarPreview;
-    if (selectedAvatarFile) {
-      const fileExt = selectedAvatarFile.name.split('.').pop();
-      const filePath = `${user.id}/${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, selectedAvatarFile, { upsert: true });
-
-      if (uploadError) {
-        setError("Photo non envoyée (bucket 'avatars' manquant ou inaccessible). Les autres informations ont été conservées.");
-      } else {
-        const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-        uploadedAvatarUrl = publicData?.publicUrl || avatarPreview;
-        if (avatarFieldKey) payload[avatarFieldKey] = uploadedAvatarUrl;
-      }
-    }
-
+    // Mise à jour uniquement dans Supabase pour les textes
     const { error: updateError } = await supabase
       .from('citoyens')
       .update(payload)
@@ -136,25 +120,48 @@ const Settings = () => {
       return;
     }
 
-    const refreshedAvatar = uploadedAvatarUrl || generateFallbackAvatar(formData.prenom, formData.nom);
-    updateUser({
+    // Pour l'avatar (qui n'existe pas en base de données), on utilise le Base64
+    // stocké localement via le AuthContext pour la démo.
+    const finalAvatar = selectedAvatarFile || avatarPreview || generateFallbackAvatar(formData.prenom, formData.nom);
+
+    // Attention: AuthContext expose "login" pour mettre à jour l'état local
+    const login = (userData) => {
+      // Small trick to dynamically get login from context since updateUser was undefined
+      const savedUser = JSON.parse(localStorage.getItem('identiguinee_user') || '{}');
+      const updatedUser = { ...savedUser, ...userData };
+      localStorage.setItem('identiguinee_user', JSON.stringify(updatedUser));
+      // Reload is needed to trigger state change across all components since we can't easily 
+      // extract login function without changing the top level import destructuring.
+    };
+
+    // Update context via the login method
+    const updatedUserData = {
+      ...user,
       prenom: formData.prenom,
       nom: formData.nom,
       email: formData.email,
-      avatar: refreshedAvatar
-    });
-
-    setSelectedAvatarFile(null);
-    setFormData((prev) => ({ ...prev, currentPassword: '', newPassword: '' }));
-    setMessage('Vos informations ont bien été synchronisées.');
-    setLoading(false);
+      avatar: finalAvatar
+    };
+    
+    // Save to local storage
+    localStorage.setItem('identiguinee_user', JSON.stringify(updatedUserData));
+    
+    // Force reload to apply avatar changes globally without needing AuthContext refactor
+    window.location.reload();
   };
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setSelectedAvatarFile(file);
-    setAvatarPreview(URL.createObjectURL(file));
+    
+    // On convertit l'image en Base64 pour la sauvegarder dans le navigateur
+    // sans avoir besoin du bucket Supabase.
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSelectedAvatarFile(reader.result);
+      setAvatarPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
