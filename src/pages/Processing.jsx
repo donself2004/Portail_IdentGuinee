@@ -55,7 +55,7 @@ const Processing = () => {
         let { data, error } = await supabase
           .from('documents_certifies')
           .insert({
-             citoyen_id: parseInt(user.id),
+             citoyen_id: user.id,
              id_acte: num_acte,
              statut: 'EN_COURS',
              statut_demande: 'Authentification'
@@ -68,7 +68,7 @@ const Processing = () => {
            const retry = await supabase
             .from('documents_certifies')
             .insert({
-               citoyen_id: parseInt(user.id),
+               citoyen_id: user.id,
                id_acte: null, // On laisse l'acte vide pour éviter l'erreur FK
                statut: 'EN_COURS',
                statut_demande: 'Authentification'
@@ -143,7 +143,7 @@ const Processing = () => {
           await supabase
             .from('citoyens')
             .update({ statut_demande: 'TERMINEE' })
-            .eq('id', parseInt(user.id));
+            .eq('id', user.id);
 
           addLog("OPÉRATION TERMINÉE AVEC SUCCÈS.", "success");
           setIsFinished(true);

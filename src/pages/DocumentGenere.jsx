@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Component } from 'react';
 import { ChevronRight, Share2, Download, Shield, Info, CheckCircle, Smartphone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation } from 'react-router-dom';
@@ -7,7 +7,28 @@ import Header from '../components/layout/Header';
 import { supabase } from '../lib/supabase';
 import './DocumentGenere.css';
 
-const DocumentGenere = () => {
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, errorMsg: '' };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorMsg: error.toString() };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '40px', textAlign: 'center', color: 'red' }}>
+          <h2>Erreur d'affichage du document</h2>
+          <p>{this.state.errorMsg}</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const DocumentGenereContent = () => {
   const { user } = useAuth();
   const location = useLocation();
   const documentId = location.state?.documentId;
@@ -53,13 +74,15 @@ const DocumentGenere = () => {
   const formatDate = (dateString) => {
     if (!dateString) return 'Aujourd\'hui';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Aujourd\'hui';
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const formatDateTime = (dateString) => {
     if (!dateString) return 'À l\'instant';
     const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', { day: 'long', month: 'long', year: 'numeric' }) + ' à ' + date.toLocaleTimeString('fr-FR');
+    if (isNaN(date.getTime())) return 'À l\'instant';
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) + ' à ' + date.toLocaleTimeString('fr-FR');
   };
 
   if (loading) {
@@ -183,7 +206,7 @@ const DocumentGenere = () => {
                     <img src={user?.avatar} alt="Photo ID" className="id-photo" />
                     <div className="signature-area">
                       <p className="signature-label">SIGNATURE</p>
-                      <p className="signature-text">{user?.prenom?.charAt(0)}. {user?.nom}</p>
+                      <p className="signature-text">{String(user?.prenom || '').charAt(0)}. {user?.nom}</p>
                     </div>
                   </div>
                   
@@ -318,5 +341,11 @@ const DocumentGenere = () => {
     </div>
   );
 };
+
+const DocumentGenere = () => (
+  <ErrorBoundary>
+    <DocumentGenereContent />
+  </ErrorBoundary>
+);
 
 export default DocumentGenere;
