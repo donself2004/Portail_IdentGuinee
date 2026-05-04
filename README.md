@@ -1,4 +1,4 @@
-# IdentiGuinée 🌱
+# IdentiGuinée 
 
 Bienvenue sur le dépôt du projet **IdentiGuinée**, réalisé dans le cadre de la phase 2 du Miabé Hackathon !
 

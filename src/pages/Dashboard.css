@@ -22,17 +22,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .section-title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: #1A1A1A;
 }
 
 .see-all {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--primary);
   text-decoration: none;
@@ -41,13 +41,13 @@
 .services-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  gap: 16px;
 }
 
 .bottom-grid {
   display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 32px;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
   align-items: stretch;
 }
 

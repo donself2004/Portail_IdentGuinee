@@ -8,8 +8,8 @@
   --text-muted: #666666;
   --white: #FFFFFF;
   --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --sidebar-width: 280px;
-  --header-height: 80px;
+  --sidebar-width: 240px;
+  --header-height: 64px;
   --font-inter: 'Inter', sans-serif;
 }
 
@@ -23,6 +23,7 @@ body {
   font-family: var(--font-inter);
   background-color: var(--bg-main);
   color: var(--text-main);
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -47,8 +48,7 @@ a {
 .main-content {
   flex: 1;
   margin-left: var(--sidebar-width);
-  padding-top: var(--header-height);
-  padding: 80px 40px 40px 40px;
+  padding: 64px 32px 32px 32px;
 }
 
 /* Global Animations */

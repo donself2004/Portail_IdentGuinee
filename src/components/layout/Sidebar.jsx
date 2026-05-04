@@ -56,7 +56,7 @@ const Sidebar = () => {
         </div>
 
         <div className="nav-group bottom">
-          <Link to="/aide" className="nav-item secondary">
+          <Link to="/aide" className={`${isActive('/aide')} secondary`}>
             <LifeBuoy size={20} />
             <span>Aide & Support</span>
           </Link>

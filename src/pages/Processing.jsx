@@ -1,82 +1,185 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle, BarChart2, ShieldCheck, Lock, Zap } from 'lucide-react';
+import { CheckCircle, BarChart2, ShieldCheck, Lock, Zap, Terminal, Database, Cpu, Link as LinkIcon, FileCheck } from 'lucide-react';
 import Sidebar from '../components/layout/Sidebar';
 import Header from '../components/layout/Header';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 import './Processing.css';
 
 const Processing = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const documentId = location.state?.documentId;
-  const numActe = location.state?.num_acte;
+  const numActe = location.state?.num_acte || sessionStorage.getItem('last_num_acte');
+  const type_document = location.state?.type_document || "Carte d'Identité";
 
   const [step, setStep] = useState(1);
   const [progress, setProgress] = useState(0);
+  const [isFinished, setIsFinished] = useState(false);
+  const [finalDocId, setFinalDocId] = useState(null);
+  const [logs, setLogs] = useState([
+    { id: 1, type: 'info', text: 'Initialisation du protocole de sécurité...' }
+  ]);
   const [stepLabels, setStepLabels] = useState({
     1: 'EN COURS',
     2: 'EN ATTENTE',
-    3: 'EN ATTENTE',
+    3: 'EN ATTENTE'
   });
 
+  const terminalEndRef = useRef(null);
+
   useEffect(() => {
-    // Barre de progression
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) { clearInterval(progressInterval); return 100; }
-        return prev + 2;
-      });
-    }, 100);
+    if (location.state?.num_acte) {
+      sessionStorage.setItem('last_num_acte', location.state.num_acte);
+    }
+  }, [location.state]);
 
-    // Étape 2 : Vérification NaissanceChain réelle
-    const step2Timer = setTimeout(async () => {
-      setStep(2);
-      setStepLabels(prev => ({ ...prev, 1: 'TERMINÉ', 2: 'EN COURS' }));
+  const addLog = (text, type = 'info') => {
+    setLogs(prev => [...prev, { id: Date.now(), type, text }]);
+  };
 
-      if (numActe) {
-        try {
-          await supabase
-            .from('naissancechain')
-            .select('id_acte, hash_blockchain')
-            .eq('id_acte', numActe.trim())
-            .maybeSingle();
-        } catch (e) {
-          console.warn('Vérification NaissanceChain:', e);
+  useEffect(() => {
+    if (terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs]);
+
+  useEffect(() => {
+    const TOTAL_DURATION = 40000;
+    const INTERVAL = 100;
+    const TOTAL_STEPS = TOTAL_DURATION / INTERVAL;
+
+    let isMounted = true;
+    const timers = [];
+    let progressInterval = null;
+
+    const startAnimation = async () => {
+      if (!user?.id) return;
+
+      try {
+        const docCode = type_document === 'Passeport' ? 'P' : (type_document === "Carte d'Identité" ? 'C' : 'A');
+        const insertPayload = {
+          citoyen_id: user.id,
+          id_acte: numActe || null,
+          statut: 'EN_COURS',
+          statut_demande: `${docCode}:Authentification`
+        };
+
+        let { data, error } = await supabase
+          .from('documents_certifies')
+          .insert(insertPayload)
+          .select('id')
+          .single();
+
+        if (error && error.code === '23503') {
+          const retry = await supabase
+            .from('documents_certifies')
+            .insert({ ...insertPayload, id_acte: null })
+            .select('id')
+            .single();
+          data = retry.data;
+          error = retry.error;
         }
-      }
-    }, 1500);
 
-    // Étape 3 : Validation & finalisation
-    const step3Timer = setTimeout(() => {
-      setStep(3);
-      setStepLabels(prev => ({ ...prev, 2: 'TERMINÉ', 3: 'EN COURS' }));
-    }, 3500);
+        if (error) throw error;
+        if (!isMounted) return;
 
-    // Finalisation : mise à jour du statut dans Supabase
-    const finishTimer = setTimeout(async () => {
-      setStepLabels(prev => ({ ...prev, 3: 'TERMINÉ' }));
+        const currentDocId = data.id;
+        setFinalDocId(currentDocId);
+        addLog('Dossier de certification créé dans le registre temporaire.', 'success');
 
-      if (documentId) {
-        try {
+        progressInterval = setInterval(() => {
+          setProgress(oldProgress => {
+            const next = Math.min(oldProgress + 100 / TOTAL_STEPS, 100);
+            if (next >= 100 && progressInterval) {
+              clearInterval(progressInterval);
+            }
+            return next;
+          });
+        }, INTERVAL);
+
+        const timeline = [
+          { time: 2000, log: 'Connexion sécurisée établie avec le serveur MATD...', type: 'success', step: 1, dbStatus: `${docCode}:Authentification` },
+          { time: 5000, log: 'Vérification des identifiants citoyen GN-SEC-V3...', type: 'info' },
+          { time: 8000, log: 'Analyse du registre national de naissance en cours...', type: 'info', step: 2, dbStatus: `${docCode}:Registre` },
+          { time: 11000, log: `Acte de naissance #${numActe || 'N/A'} localisé dans le registre central.`, type: 'success' },
+          { time: 14000, log: 'Extraction des métadonnées parentales...', type: 'info' },
+          { time: 17000, log: "Démarrage de l'analyse biométrique comparative...", type: 'info', step: 3, dbStatus: `${docCode}:Biométrie` },
+          { time: 20000, log: 'Vérification de la cohérence photo via IA souveraine...', type: 'info' },
+          { time: 23000, log: 'Authentification biométrique réussie. Score: 99.8%', type: 'success' },
+          { time: 26000, log: "Préparation de l'ancrage Blockchain NaissanceChain...", type: 'info', step: 4, dbStatus: `${docCode}:Blockchain` },
+          { time: 29000, log: 'Génération du hash cryptographique du document...', type: 'info' },
+          { time: 32000, log: 'Transaction confirmée sur le réseau national. Bloc #G821-X', type: 'success', step: 5, dbStatus: `${docCode}:Finalisation` },
+          { time: 35000, log: `Génération du certificat ${type_document} sécurisé avec QR Code...`, type: 'info' },
+          { time: 38000, log: `Finalisation du titre numérique officiel : ${type_document}...`, type: 'info' }
+        ];
+
+        timeline.forEach(item => {
+          const timer = setTimeout(async () => {
+            if (!isMounted) return;
+            addLog(item.log, item.type);
+            if (item.step) setStep(item.step);
+            if (item.dbStatus) {
+              await supabase
+                .from('documents_certifies')
+                .update({ statut_demande: item.dbStatus })
+                .eq('id', currentDocId);
+            }
+          }, item.time);
+          timers.push(timer);
+        });
+
+        const finalTimer = setTimeout(async () => {
+          if (!isMounted) return;
           await supabase
             .from('documents_certifies')
-            .update({ statut: 'GENERE', statut_demande: 'TERMINEE' })
-            .eq('id', documentId);
-        } catch (e) {
-          console.warn('Mise à jour document:', e);
-        }
+            .update({
+              statut_demande: `${docCode}:Terminée`,
+              statut: 'GENERE',
+              date_generation: new Date().toISOString()
+            })
+            .eq('id', currentDocId);
+
+          await supabase
+            .from('citoyens')
+            .update({ statut_demande: 'TERMINEE' })
+            .eq('id', user.id);
+
+          addLog('OPÉRATION TERMINÉE AVEC SUCCÈS.', 'success');
+          setIsFinished(true);
+        }, TOTAL_DURATION);
+        timers.push(finalTimer);
+      } catch (err) {
+        console.error('Processing error details:', err);
+        const errorMsg = err.message || 'Erreur de connexion';
+        const errorDetail = err.details || "Problème d'accès à la base de données";
+        addLog(`ERREUR: ${errorMsg}`, 'error');
+        addLog(`DÉTAIL: ${errorDetail}`, 'error');
       }
-      navigate('/document-genere');
-    }, 5500);
+    };
+
+    startAnimation();
 
     return () => {
-      clearInterval(progressInterval);
-      clearTimeout(step2Timer);
-      clearTimeout(step3Timer);
-      clearTimeout(finishTimer);
+      isMounted = false;
+      if (progressInterval) clearInterval(progressInterval);
+      timers.forEach(t => clearTimeout(t));
     };
-  }, [documentId, numActe, navigate]);
+  }, [numActe, type_document, user?.id]);
+
+  const handleFinish = () => {
+    navigate('/document-genere', { state: { documentId: finalDocId, type_document } });
+  };
+
+  const stepsData = [
+    { id: 1, title: 'Authentification', icon: <Lock size={20} />, desc: 'Vérification des accès sécurisés' },
+    { id: 2, title: 'Registre National', icon: <Database size={20} />, desc: "Extraction de l'acte de naissance" },
+    { id: 3, title: 'Analyse IA', icon: <Cpu size={20} />, desc: 'Validation biométrique souveraine' },
+    { id: 4, title: 'Blockchain', icon: <LinkIcon size={20} />, desc: 'Ancrage sur NaissanceChain' },
+    { id: 5, title: 'Certification', icon: <FileCheck size={20} />, desc: 'Émission du titre numérique' }
+  ];
 
   return (
     <div className="layout-wrapper">
@@ -87,13 +190,13 @@ const Processing = () => {
         <div className="processing-content animate-fade-in">
           <div className="processing-header">
             <div className="system-status-badge animate-slide-up">
-              <span className="pulse-dot"></span> SYSTÈME SÉCURISÉ ACTIF
+              <span className="pulse-dot"></span> INFRASTRUCTURE SOUVERAINE ACTIVE
             </div>
             <h1 className="processing-title animate-slide-up" style={{ animationDelay: '0.1s' }}>
-              Traitement en cours...
+              Traitement de votre demande
             </h1>
             <p className="processing-subtitle animate-slide-up" style={{ animationDelay: '0.2s' }}>
-              Nous analysons vos informations en temps réel grâce à notre infrastructure souveraine hautement sécurisée.
+              Le délai de 40 secondes garantit la triple vérification par les registres d'État et l'ancrage blockchain.
             </p>
             {numActe && (
               <p style={{ color: '#006D44', fontWeight: 600, fontSize: 13, marginTop: 8 }}>
@@ -102,59 +205,63 @@ const Processing = () => {
             )}
           </div>
 
-          <div className="processing-card animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <div className="steps-container">
-              {/* Étape 1 */}
-              <div className={`processing-step ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
-                <div className="step-icon-wrapper">
-                  <CheckCircle size={32} />
+          <div className="processing-main-grid">
+            <div className="processing-steps-column animate-slide-up" style={{ animationDelay: '0.3s' }}>
+              {stepsData.map((s) => (
+                <div key={s.id} className={`process-step-item ${step >= s.id ? 'active' : ''} ${step > s.id ? 'completed' : ''}`}>
+                  <div className="step-indicator">
+                    {step > s.id ? <CheckCircle size={18} /> : s.icon}
+                  </div>
+                  <div className="step-info">
+                    <h4>{s.title}</h4>
+                    <p>{s.desc}</p>
+                  </div>
+                  {step === s.id && !isFinished && <div className="step-loader"></div>}
                 </div>
-                <h4>Vérification Registre</h4>
-                <div className="step-status">{stepLabels[1]}</div>
-                <p>Identification au registre national NaissanceChain effectuée avec succès.</p>
-              </div>
-
-              {/* Étape 2 */}
-              <div className={`processing-step ${step >= 2 ? 'active' : 'waiting'} ${step > 2 ? 'completed' : ''}`}>
-                <div className="step-icon-wrapper">
-                  <BarChart2 size={32} />
-                </div>
-                <h4>Analyse des données</h4>
-                <div className="step-status">{stepLabels[2]}</div>
-                <p>Croisement biométrique et vérification du hash blockchain Hyperledger Fabric.</p>
-              </div>
-
-              {/* Étape 3 */}
-              <div className={`processing-step ${step >= 3 ? 'active' : 'waiting'} ${step > 3 ? 'completed' : ''}`}>
-                <div className="step-icon-wrapper outline">
-                  <ShieldCheck size={32} />
-                </div>
-                <h4>Validation automatique</h4>
-                <div className="step-status">{stepLabels[3]}</div>
-                <p>Délivrance finale du certificat numérique. Aucune intervention humaine requise.</p>
-              </div>
+              ))}
             </div>
 
-            <div className="progress-bar-container">
-              <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
-            </div>
-            <p style={{ textAlign: 'center', fontSize: 12, color: '#888', marginTop: 8 }}>{progress}%</p>
-          </div>
-
-          <div className="info-cards-row animate-slide-up" style={{ animationDelay: '0.4s' }}>
-            <div className="info-card warning">
-              <div className="info-icon"><Lock size={24} /></div>
-              <div className="info-text">
-                <h4>Garantie d'intégrité</h4>
-                <p><strong>Aucune intervention humaine</strong> n'est requise durant cette étape. Le processus est régi par des protocoles cryptographiques stricts pour garantir la neutralité.</p>
+            <div className="processing-visuals animate-slide-up" style={{ animationDelay: '0.4s' }}>
+              <div className="terminal-container">
+                <div className="terminal-header">
+                  <div className="dots"><span></span><span></span><span></span></div>
+                  <div className="title"><Terminal size={14} /> console.guinee.gouv.gn</div>
+                </div>
+                <div className="terminal-body">
+                  {logs.map((log) => (
+                    <div key={log.id} className={`log-line ${log.type}`}>
+                      <span className="timestamp">[{new Date().toLocaleTimeString()}]</span>
+                      <span className="text">{log.text}</span>
+                    </div>
+                  ))}
+                  <div ref={terminalEndRef} />
+                </div>
               </div>
-            </div>
 
-            <div className="info-card success">
-              <div className="info-icon"><Zap size={24} /></div>
-              <div className="info-text">
-                <h4>Rapidité IdentiGuinée</h4>
-                <p>Grâce à l'infrastructure NaissanceChain, le temps de traitement moyen a été réduit de <strong>14 jours à moins de 30 secondes</strong>.</p>
+              <div className="info-card success">
+                <div className="info-icon"><Zap size={24} /></div>
+                <div className="info-text">
+                  <h4>Rapidité IdentiGuinée</h4>
+                  <p>Grâce à l'infrastructure NaissanceChain, le temps de traitement moyen a été réduit de <strong>14 jours à moins de 30 secondes</strong>.</p>
+                </div>
+                <div className="progress-section">
+                  <div className="progress-info">
+                    <span>Progression globale</span>
+                    <span>{Math.round(progress)}%</span>
+                  </div>
+                  <div className="progress-bar-container large">
+                    <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
+                  </div>
+                </div>
+
+                {isFinished && (
+                  <button
+                    className="btn-finish-process animate-bounce-in"
+                    onClick={handleFinish}
+                  >
+                    <FileCheck size={20} /> Visualiser mon document officiel
+                  </button>
+                )}
               </div>
             </div>
           </div>

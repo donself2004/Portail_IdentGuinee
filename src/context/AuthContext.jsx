@@ -5,8 +5,13 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   // Charger l'utilisateur depuis le localStorage de manière synchrone au démarrage
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('identiguinee_user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('identiguinee_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      console.error("Auth storage error:", e);
+      return null;
+    }
   });
 
   const login = (userData) => {

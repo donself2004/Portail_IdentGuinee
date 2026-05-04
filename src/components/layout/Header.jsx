@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Bell, MessageSquare, X, CheckCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import './Header.css';
 
 const NOTIFICATIONS = [
   { id: 1, title: "Carte d'identité disponible", desc: "Votre CNI biométrique est prête à être retirée au centre de Kaloum.", time: "Il y a 2h", read: false },
   { id: 2, title: "Vérification NaissanceChain réussie", desc: "Votre acte de naissance a été confirmé avec succès dans le registre.", time: "Hier", read: false },
   { id: 3, title: "Rappel rendez-vous", desc: "Votre rendez-vous au centre de Conakry est demain à 10h00.", time: "Il y a 2 jours", read: true },
-  { id: 4, title: "Bienvenue sur IdentiGuinée !", desc: "Découvrez tous nos services de documents officiels en ligne.", time: "Il y a 3 jours", read: true },
+  { id: 4, title: "Bienvenue sur IdentiGuinée", desc: "Découvrez tous nos services de documents officiels en ligne.", time: "Il y a 3 jours", read: true },
 ];
 
 const Header = () => {
   const { user } = useAuth();
+  const { unreadCount: contextUnreadCount } = useNotifications();
+  const navigate = useNavigate();
   const avatarSrc = user?.avatar || `https://ui-avatars.com/api/?name=${user?.prenom || 'Citoyen'}+${user?.nom || ''}&background=006D44&color=fff`;
 
   const [notifOpen, setNotifOpen] = useState(false);
@@ -23,25 +27,31 @@ const Header = () => {
   const [chatInput, setChatInput] = useState('');
   const [searchVal, setSearchVal] = useState('');
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const localUnreadCount = notifications.filter(n => !n.read).length;
 
   const markAllRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
 
-  const sendMessage = () => {
+  const handleSendMessage = () => {
     if (!chatInput.trim()) return;
-    const userMsg = chatInput.trim();
-    setChatMessages(prev => [...prev, { from: 'user', text: userMsg }]);
+    const content = chatInput.trim();
+    setChatMessages(prev => [...prev, { from: 'user', text: content }]);
     setChatInput('');
     setTimeout(() => {
-      const lower = userMsg.toLowerCase();
+      const lower = content.toLowerCase();
       let reply = "Je transmets votre demande à un agent disponible. Temps d'attente : ~5 min.";
-      if (lower.includes('acte') || lower.includes('naissance')) reply = "Pour un extrait de naissance, allez dans 'Nouvelle demande' → 'Extrait de Naissance' et entrez votre numéro GN-AAAA-NNNNN.";
-      else if (lower.includes('passeport')) reply = "Pour un passeport, cliquez sur 'Nouvelle demande' → 'Passeport'. Délai : 7-14 jours ouvrables.";
-      else if (lower.includes('carte') || lower.includes('identit')) reply = "La carte d'identité biométrique est gratuite depuis 2025. Demandez-la via 'Nouvelle demande'.";
-      else if (lower.includes('permis')) reply = "Pour un permis de conduire, passez d'abord l'examen ANASER, puis faites votre demande ici.";
-      else if (lower.includes('bonjour') || lower.includes('salut')) reply = `Bonjour ${user?.prenom || ''} ! En quoi puis-je vous aider aujourd'hui ?`;
+      if (lower.includes('acte') || lower.includes('naissance')) {
+        reply = "Pour un extrait de naissance, allez dans 'Nouvelle demande' → 'Extrait de Naissance' et entrez votre numéro GN-AAAA-NNNNN.";
+      } else if (lower.includes('passeport')) {
+        reply = "Pour un passeport, cliquez sur 'Nouvelle demande' → 'Passeport'. Délai : 7-14 jours ouvrables.";
+      } else if (lower.includes('carte') || lower.includes('identit')) {
+        reply = "La carte d'identité biométrique est gratuite depuis 2025. Demandez-la via 'Nouvelle demande'.";
+      } else if (lower.includes('permis')) {
+        reply = "Pour un permis de conduire, passez d'abord l'examen ANASER, puis faites votre demande ici.";
+      } else if (lower.includes('bonjour') || lower.includes('salut')) {
+        reply = `Bonjour ${user?.prenom || 'citoyen'} ! En quoi puis-je vous aider aujourd'hui ?`;
+      }
       setChatMessages(prev => [...prev, { from: 'agent', text: reply }]);
-    }, 1000);
+    }, 800);
   };
 
   return (
@@ -59,39 +69,39 @@ const Header = () => {
         </div>
 
         <div className="header-actions">
-          {/* ── Bouton Chat ── */}
           <button
             className="notification-btn"
-            onClick={() => { setChatOpen(o => !o); setNotifOpen(false); }}
+            onClick={() => { setChatOpen(open => !open); setNotifOpen(false); }}
             title="Chat support"
+            type="button"
             style={{ position: 'relative' }}
           >
             <MessageSquare size={20} />
           </button>
 
-          {/* ── Bouton Notifications ── */}
           <button
+            type="button"
             className="notification-btn"
-            onClick={() => { setNotifOpen(o => !o); setChatOpen(false); }}
+            onClick={() => { setNotifOpen(open => !open); setChatOpen(false); }}
             title="Notifications"
             style={{ position: 'relative' }}
           >
             <Bell size={20} />
-            {unreadCount > 0 && (
+            {(localUnreadCount || contextUnreadCount) > 0 && (
               <span className="notification-badge" style={{
                 position: 'absolute', top: 4, right: 4,
                 background: '#CE1126', color: '#fff',
                 borderRadius: '50%', width: 17, height: 17,
                 fontSize: 10, fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>{unreadCount}</span>
+              }}>{localUnreadCount || contextUnreadCount}</span>
             )}
           </button>
 
           <div className="user-full-profile">
             <div className="user-details">
               <p className="user-name">{user?.prenom} {user?.nom}</p>
-              <p className="user-id">MATRICULE: {user?.matricule}</p>
+              <p className="user-id">MATRICULE: {user?.matricule || '—'}</p>
             </div>
             <div className="avatar-container">
               <img src={avatarSrc} alt="Profile" className="avatar-header" />
@@ -101,7 +111,6 @@ const Header = () => {
         </div>
       </header>
 
-      {/* ── Dropdown Notifications ── */}
       {notifOpen && (
         <div style={{
           position: 'fixed', top: 68, right: 24, width: 360, background: '#fff',
@@ -111,7 +120,7 @@ const Header = () => {
           <div style={{ padding: '14px 18px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <p style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>Notifications</p>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              {unreadCount > 0 && (
+              {localUnreadCount > 0 && (
                 <button onClick={markAllRead} style={{ background: 'none', border: 'none', color: '#006D44', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <CheckCheck size={14} /> Tout marquer lu
                 </button>
@@ -139,7 +148,7 @@ const Header = () => {
               </div>
             ))}
           </div>
-          {unreadCount === 0 && (
+          {localUnreadCount === 0 && (
             <div style={{ padding: '20px', textAlign: 'center', color: '#888', fontSize: 13 }}>
               ✅ Toutes les notifications sont lues
             </div>
@@ -147,7 +156,6 @@ const Header = () => {
         </div>
       )}
 
-      {/* ── Chat flottant ── */}
       {chatOpen && (
         <div style={{
           position: 'fixed', bottom: 24, right: 24, width: 360,
@@ -167,26 +175,29 @@ const Header = () => {
             <button onClick={() => setChatOpen(false)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer' }}>✕</button>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: 16, maxHeight: 280, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {chatMessages.map((msg, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: msg.from === 'user' ? 'flex-end' : 'flex-start' }}>
+            {chatMessages.map((msg, index) => (
+              <div key={index} style={{ display: 'flex', justifyContent: msg.from === 'user' ? 'flex-end' : 'flex-start' }}>
                 <div style={{
                   maxWidth: '80%', padding: '10px 14px', borderRadius: 12,
                   background: msg.from === 'user' ? '#006D44' : '#f0f0f0',
                   color: msg.from === 'user' ? '#fff' : '#333',
                   fontSize: 13, lineHeight: 1.5
-                }}>{msg.text}</div>
+                }}>
+                  {msg.text}
+                </div>
               </div>
             ))}
           </div>
           <div style={{ padding: '10px 12px', borderTop: '1px solid #eee', display: 'flex', gap: 8 }}>
             <input
-              type="text" value={chatInput}
+              type="text"
+              value={chatInput}
               onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendMessage()}
+              onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
               placeholder="Tapez votre message..."
               style={{ flex: 1, padding: '10px 14px', border: '1px solid #ddd', borderRadius: 10, fontSize: 13, outline: 'none' }}
             />
-            <button onClick={sendMessage} style={{ background: '#006D44', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+            <button onClick={handleSendMessage} style={{ background: '#006D44', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 16px', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
               ➤
             </button>
           </div>

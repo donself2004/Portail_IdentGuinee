@@ -1,0 +1,138 @@
+.notifications-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #999999;
+}
+
+.breadcrumbs .active {
+  color: var(--primary);
+}
+
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin-bottom: 12px;
+}
+
+.page-subtitle {
+  font-size: 15px;
+  color: var(--text-muted);
+  max-width: 760px;
+  line-height: 1.7;
+}
+
+.mark-read-button {
+  background-color: var(--primary);
+  color: var(--white);
+  border: none;
+  border-radius: 16px;
+  padding: 14px 22px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notifications-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.notification-card {
+  background-color: var(--white);
+  padding: 26px 28px;
+  border-radius: 24px;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.notification-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.08);
+}
+
+.notification-card.unread {
+  border: 1px solid #D8F6E9;
+}
+
+.notification-card.read {
+  opacity: 0.88;
+}
+
+.notification-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.notification-card h4 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.notification-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--primary);
+}
+
+.notification-card p {
+  color: var(--text-muted);
+  line-height: 1.75;
+  margin-bottom: 14px;
+}
+
+.notification-time {
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.empty-notification-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 48px 32px;
+  border-radius: 24px;
+  background-color: #F8FAF9;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.empty-notification-card h3 {
+  margin: 0;
+  font-size: 22px;
+  color: #1A1A1A;
+}
+
+@media (max-width: 760px) {
+  .notifications-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mark-read-button {
+    width: 100%;
+  }
+}
