@@ -74,6 +74,8 @@ const Settings = () => {
       return;
     }
 
+    const finalAvatar = selectedAvatarFile || avatarPreview || generateFallbackAvatar(formData.prenom, formData.nom);
+
     const payload = {
       prenom: formData.prenom,
       nom: formData.nom,
@@ -84,6 +86,11 @@ const Settings = () => {
     if (availableFields.includes('telephone1')) payload.telephone1 = formData.telephone;
     if (availableFields.includes('adresse')) payload.adresse = formData.adresse;
     if (availableFields.includes('date_naissance')) payload.date_naissance = formData.date_naissance || null;
+    
+    // Sauvegarde de l'avatar en base de données
+    if (avatarFieldKey) {
+      payload[avatarFieldKey] = finalAvatar;
+    }
 
     if (formData.newPassword.trim()) {
       if (!formData.currentPassword.trim()) {
@@ -107,7 +114,7 @@ const Settings = () => {
       payload.password = formData.newPassword.trim();
     }
 
-    // Mise à jour uniquement dans Supabase pour les textes
+    // Mise à jour dans Supabase
     const { error: updateError } = await supabase
       .from('citoyens')
       .update(payload)

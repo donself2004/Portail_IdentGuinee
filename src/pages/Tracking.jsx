@@ -77,8 +77,9 @@ const Tracking = () => {
   };
 
   const getStatut = (doc) => {
+    if (!doc) return 'en_cours';
     const s = (doc.statut || '').toUpperCase();
-    const sd = (doc.statut_demande?.split(':')[1] || '').toUpperCase();
+    const sd = (doc.statut_demande?.split(':')?.[1] || '').toUpperCase();
     if (['GENERE', 'GÉNÉRÉ', 'VALIDE', 'VALIDATED', 'TERMINEE', 'TERMINÉE'].some(v => s === v || sd === v)) return 'done';
     if (s === 'REJETE' || s === 'REJECTED') return 'rejete';
     return 'en_cours';
@@ -91,6 +92,7 @@ const Tracking = () => {
   };
 
   const getDocName = (doc) => {
+    if (!doc) return 'Document Officiel GN';
     const raw = doc.statut_demande || '';
     const code = raw.includes(':') ? raw.split(':')[0] : 'A';
     return DOC_NAMES[code] || 'Document Officiel GN';
@@ -148,8 +150,9 @@ const Tracking = () => {
               </thead>
               <tbody>
                 {documents.map((doc, i) => {
+                  if (!doc) return null;
                   const stat = getStatut(doc);
-                  const sc = statutDisplay[stat];
+                  const sc = statutDisplay[stat] || statutDisplay.en_cours;
                   const canDelete = stat !== 'done'; // ne peut supprimer que si pas encore terminée
 
                   return (
@@ -166,7 +169,7 @@ const Tracking = () => {
                         </div>
                       </td>
                       <td style={{ padding: '16px 20px', fontSize: 12, fontFamily: 'monospace', color: 'var(--primary)', fontWeight: 600 }}>
-                        REQ-{doc.id?.substring(0, 8).toUpperCase()}-GN
+                        REQ-{String(doc.id).substring(0, 8).toUpperCase() || 'UNKNOWN'}-GN
                       </td>
                       <td style={{ padding: '16px 20px', fontSize: 13, color: 'var(--text-muted)' }}>
                         {fmtDate(doc.date_generation || doc.created_at)}
@@ -179,7 +182,7 @@ const Tracking = () => {
                       <td style={{ padding: '16px 20px' }}>
                         {canDelete ? (
                           <button
-                            onClick={() => setToDelete({ id: doc.id, ref: `REQ-${doc.id?.substring(0, 8).toUpperCase()}-GN` })}
+                            onClick={() => setToDelete({ id: doc.id, ref: `REQ-${String(doc.id).substring(0, 8).toUpperCase() || 'UNKNOWN'}-GN` })}
                             className="btn-danger"
                             style={{ whiteSpace: 'nowrap' }}
                           >

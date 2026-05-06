@@ -117,4 +117,26 @@ Accessible sans connexion par toute organisation tierce.
 | Admin | `admin` | `admin123` → puis clé secrète : `IDENTIGUINEE@2025!` |
 | Citoyen | Email ou N° acte | Mot de passe enregistré |
 
+---
+
+## 🛠️ Dernières Mises à Jour (06/05/2026)
+
+De nombreuses améliorations de stabilité et de nouvelles fonctionnalités ont été ajoutées aujourd'hui pour rendre la démo robuste et professionnelle :
+
+### ✅ Nouvelles Fonctionnalités
+- **Téléchargement de documents** : Les citoyens peuvent désormais télécharger leurs documents générés (Passeport, CNI, etc.) aux formats **PDF** et **PNG**.
+- **Synchronisation Cloud du Profil** : La photo de profil (avatar) est désormais sauvegardée dans Supabase. Vos modifications en local sont maintenant visibles sur la version déployée (Vercel).
+- **Vérification Publique Renforcée** : Amélioration de la logique de lecture des QR codes pour une authentification instantanée.
+
+### 📱 Interface & Responsivité
+- **Full Responsive Design** : Optimisation complète pour mobile et tablette. Le portail est désormais parfaitement utilisable sur smartphone (menus burger, grilles adaptatives).
+- **Amélioration du Dashboard** : Synchronisation plus intelligente des données citoyennes avec le registre *NaissanceChain*.
+
+### 🐞 Correctifs & Stabilité
+- **Fix "Écran Blanc"** : Résolution d'un crash critique sur la page de suivi des demandes lié au formatage des identifiants numériques.
+- **Sécurisation des données** : Ajout de couches de sécurité (optional chaining) pour éviter les erreurs de rendu en cas de données incomplètes en base.
+- **Support Vercel** : Documentation des étapes pour débloquer les déploiements sur les comptes Vercel Hobby.
+
+---
+
 *Fait avec passion pour l'avenir numérique de la Guinée. 🇬🇳*

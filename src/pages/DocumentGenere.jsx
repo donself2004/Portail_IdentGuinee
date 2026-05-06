@@ -86,12 +86,50 @@ const DocumentGenereContent = () => {
     window.print();
   };
 
-  const handleDownloadPNG = () => {
-    alert('Téléchargement PNG non disponible dans cette version.');
+  const handleDownloadPNG = async () => {
+    if (!printRef.current) return;
+    try {
+      const { toPng } = await import('html-to-image');
+      const dataUrl = await toPng(printRef.current, {
+        quality: 1,
+        pixelRatio: 2,
+        backgroundColor: '#f8f9fa'
+      });
+      const link = document.createElement('a');
+      link.download = `Document-${documentId || 'GN'}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Erreur PNG:', err);
+      alert('Erreur lors de la génération de l\'image.');
+    }
   };
 
-  const handleDownloadPDF = () => {
-    alert('Téléchargement PDF non disponible dans cette version.');
+  const handleDownloadPDF = async () => {
+    if (!printRef.current) return;
+    try {
+      const { toCanvas } = await import('html-to-image');
+      const { jsPDF } = await import('jspdf');
+      
+      const canvas = await toCanvas(printRef.current, {
+        pixelRatio: 2,
+        backgroundColor: '#f8f9fa'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`Document-${documentId || 'GN'}.pdf`);
+    } catch (err) {
+      console.error('Erreur PDF:', err);
+      // Fallback vers impression si les libs échouent
+      window.print();
+    }
   };
 
   if (loading) {
