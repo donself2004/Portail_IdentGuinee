@@ -32,11 +32,22 @@ const Verify = () => {
       try {
         // ── Étape 1 : chercher le document certifié ──
         if (targetId) {
-          const { data: d } = await supabase
+          // On cherche d'abord par hash (plus sûr)
+          let { data: d, error: errHash } = await supabase
             .from('documents_certifies')
             .select('*')
-            .eq('id', targetId)
+            .eq('hash_document', targetId)
             .maybeSingle();
+
+          // Fallback par ID numérique si non trouvé par hash (et si targetId ressemble à un nombre)
+          if (!d && !isNaN(targetId)) {
+            const { data: dById } = await supabase
+              .from('documents_certifies')
+              .select('*')
+              .eq('id', parseInt(targetId))
+              .maybeSingle();
+            d = dById;
+          }
 
           if (d) {
             setDoc(d);
@@ -150,7 +161,7 @@ const Verify = () => {
     { icon: <Calendar size={15} />, label: 'Date de naissance',   val: fmtDate(acte?.date_naissance || citoyen?.date_naissance) },
     { icon: <MapPin size={15} />,   label: 'Lieu de naissance',   val: acte?.lieu_naissance || '—' },
     { icon: <FileText size={15} />, label: 'Numéro d\'acte',      val: doc?.id_acte || acte?.id_acte || targetActe || '—' },
-    { icon: <Hash size={15} />,     label: 'Référence document',  val: doc?.id ? `DOC-${doc.id.substring(0, 12).toUpperCase()}` : '—' },
+    { icon: <Hash size={15} />,     label: 'Référence document',  val: doc?.id ? `DOC-${String(doc.id).padStart(5, '0')}` : '—' },
     { icon: <Clock size={15} />,    label: 'Date d\'émission',    val: fmtDate(doc?.date_generation || doc?.created_at) },
   ];
 

@@ -32,13 +32,26 @@ class ErrorBoundary extends Component {
 const DocumentGenereContent = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const documentId = location.state?.documentId;
+  // Persistance de l'ID du document via sessionStorage pour supporter le rafraîchissement
+  const [documentId, setDocumentId] = useState(() => {
+    return location.state?.documentId || sessionStorage.getItem('last_document_id');
+  });
+
   const [docData, setDocData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletAdded, setWalletAdded] = useState(false);
   const printRef = useRef(null);
-  const typeDoc = location.state?.type_document || "Carte d'Identité";
+  const typeDoc = location.state?.type_document || sessionStorage.getItem('last_type_document') || "Carte d'Identité";
+
+  useEffect(() => {
+    if (location.state?.documentId) {
+      sessionStorage.setItem('last_document_id', location.state.documentId);
+    }
+    if (location.state?.type_document) {
+      sessionStorage.setItem('last_type_document', location.state.type_document);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const fetchDocument = async () => {
@@ -177,12 +190,12 @@ const DocumentGenereContent = () => {
                   <div style={{ textAlign: 'center' }}>
                     <img
                       src={
-                        'https://api.qrserver.com/v1/create-qr-code/?size=72x72&data=' +
+                        'https://api.qrserver.com/v1/create-qr-code/?size=128x128&data=' +
                         encodeURIComponent(
-                          window.location.origin + '/verify/' + (documentId || 'demo')
+                          window.location.origin + '/verify/' + (docData?.hash_document || documentId || 'demo')
                         )
                       }
-                      style={{ width: 72, height: 72, display: 'block', margin: '0 auto 4px', borderRadius: 4 }}
+                      style={{ width: 84, height: 84, display: 'block', margin: '0 auto 4px', borderRadius: 4, background: '#fff', padding: 4 }}
                       alt="QR Vérification"
                     />
                     <p style={{ fontSize: 8, color: '#888', margin: 0, lineHeight: 1.3, textAlign: 'center' }}>

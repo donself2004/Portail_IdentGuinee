@@ -132,12 +132,19 @@ const Processing = () => {
 
         const finalTimer = setTimeout(async () => {
           if (!isMounted) return;
+          
+          // Génération d'un hash de document unique (simulé pour la démo)
+          const randomBytes = new Uint8Array(32);
+          window.crypto.getRandomValues(randomBytes);
+          const docHash = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+
           await supabase
             .from('documents_certifies')
             .update({
               statut_demande: `${docCode}:Terminée`,
               statut: 'GENERE',
-              date_generation: new Date().toISOString()
+              date_generation: new Date().toISOString(),
+              hash_document: docHash
             })
             .eq('id', currentDocId);
 
