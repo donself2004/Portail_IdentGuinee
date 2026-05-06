@@ -1,20 +1,15 @@
 import React from 'react';
+import Layout from '../components/layout/Layout';
 import { ChevronRight, Bell, CheckCircle2 } from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
-import Sidebar from '../components/layout/Sidebar';
-import Header from '../components/layout/Header';
 import './Notifications.css';
 
 const Notifications = () => {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
   return (
-    <div className="layout-wrapper">
-      <Sidebar />
-      <main className="main-content">
-        <Header />
-
-        <div className="notifications-page animate-fade-in">
+    <Layout>
+      <div className="notifications-page animate-fade-in">
           <nav className="breadcrumbs animate-slide-up" style={{ animationDelay: '0.1s' }}>
             <span>TABLEAU DE BORD</span> <ChevronRight size={14} />
             <span className="active">NOTIFICATIONS</span>
@@ -57,8 +52,7 @@ const Notifications = () => {
             )}
           </div>
         </div>
-      </main>
-    </div>
+    </Layout>
   );
 };
 

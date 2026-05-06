@@ -1,137 +1,192 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ChevronRight, FileText, Clock, CheckCircle } from 'lucide-react';
-import Sidebar from '../components/layout/Sidebar';
-import Header from '../components/layout/Header';
+import { ChevronRight, FileText, Clock, CheckCircle, XCircle, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
+import Layout from '../components/layout/Layout';
 import { supabase } from '../lib/supabase';
+
+const DOC_NAMES = {
+  P: 'Passeport Biométrique GN',
+  C: "Carte Nationale d'Identité",
+  A: 'Acte de Naissance',
+  E: "Extrait d'Acte de Naissance",
+  D: 'Permis de Conduire',
+  G: 'Carte Grise',
+  J: 'Casier Judiciaire',
+  N: 'Certificat de Nationalité',
+};
+
+const fmtDate = (v) => v
+  ? new Date(v).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+  : '—';
+
+// ── Modale confirmation suppression ──
+const DeleteModal = ({ demande, onConfirm, onCancel }) => (
+  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div style={{ background: '#fff', borderRadius: 20, padding: 32, maxWidth: 420, width: '100%', textAlign: 'center', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}>
+      <div style={{ width: 56, height: 56, background: 'var(--danger-light)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+        <AlertTriangle size={28} color="var(--danger)" />
+      </div>
+      <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-heading)', margin: '0 0 10px' }}>Supprimer cette demande ?</h3>
+      <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: '0 0 24px', lineHeight: 1.5 }}>
+        Cette action est irréversible. La demande <strong>{demande?.ref}</strong> sera définitivement supprimée.
+      </p>
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+        <button onClick={onCancel} style={{ padding: '10px 24px', background: 'var(--bg-main)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Annuler
+        </button>
+        <button onClick={onConfirm} style={{ padding: '10px 24px', background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Trash2 size={15} /> Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
 const Tracking = () => {
   const { user } = useAuth();
   const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toDelete, setToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    const fetchTracking = async () => {
-      if (!user?.id) {
-        setDocuments([]);
-        return;
-      }
-
-      // 1. Récupérer les documents certifiés
-      const { data: certDocs } = await supabase
+  const fetchDemandes = async () => {
+    if (!user?.id) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const { data } = await supabase
         .from('documents_certifies')
         .select('id, id_acte, statut_demande, statut, created_at, date_generation')
         .eq('citoyen_id', user.id)
         .order('created_at', { ascending: false });
+      setDocuments(data || []);
+    } catch { setDocuments([]); }
+    setLoading(false);
+  };
 
-      // 2. Récupérer le statut actuel du citoyen (pour les demandes en attente)
-      const { data: citoyen } = await supabase
-        .from('citoyens')
-        .select('statut_demande, id_acte_lie')
-        .eq('id', user.id)
-        .single();
+  useEffect(() => { fetchDemandes(); }, [user?.id]);
 
-      let finalDocs = certDocs || [];
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      await supabase.from('documents_certifies').delete().eq('id', toDelete.id);
+      setDocuments(prev => prev.filter(d => d.id !== toDelete.id));
+    } catch { /* silencieux */ }
+    setDeleting(false);
+    setToDelete(null);
+  };
 
-      setDocuments(finalDocs);
-    };
+  const getStatut = (doc) => {
+    const s = (doc.statut || '').toUpperCase();
+    const sd = (doc.statut_demande?.split(':')[1] || '').toUpperCase();
+    if (['GENERE', 'GÉNÉRÉ', 'VALIDE', 'VALIDATED', 'TERMINEE', 'TERMINÉE'].some(v => s === v || sd === v)) return 'done';
+    if (s === 'REJETE' || s === 'REJECTED') return 'rejete';
+    return 'en_cours';
+  };
 
-    fetchTracking();
-  }, [user?.id]);
+  const statutDisplay = {
+    done:     { label: 'Terminée',   color: 'var(--primary)', bg: 'var(--primary-light)', icon: <CheckCircle size={13} /> },
+    en_cours: { label: 'En cours',   color: 'var(--warning)', bg: 'var(--warning-light)', icon: <Clock size={13} /> },
+    rejete:   { label: 'Rejetée',    color: 'var(--danger)',  bg: 'var(--danger-light)',  icon: <XCircle size={13} /> },
+  };
 
-  const formatDate = (dateValue) =>
-    new Date(dateValue).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
+  const getDocName = (doc) => {
+    const raw = doc.statut_demande || '';
+    const code = raw.includes(':') ? raw.split(':')[0] : 'A';
+    return DOC_NAMES[code] || 'Document Officiel GN';
+  };
 
   return (
-    <div className="layout-wrapper">
-      <Sidebar />
-      <main className="main-content">
-        <Header />
-        
-        <div className="processing-content animate-fade-in" style={{ alignItems: 'flex-start', textAlign: 'left' }}>
-          <nav className="breadcrumbs animate-slide-up">
-            <span>TABLEAU DE BORD</span> <ChevronRight size={14} />
-            <span className="active">SUIVI DES DEMANDES</span>
-          </nav>
-          
-          <h2 className="page-title animate-slide-up" style={{ marginTop: '16px', marginBottom: '8px' }}>
-            Suivi de vos demandes
-          </h2>
-          <p className="page-subtitle animate-slide-up" style={{ marginBottom: '32px' }}>
-            Consultez l'état d'avancement de vos démarches administratives.
-          </p>
+    <Layout>
+      {toDelete && (
+        <DeleteModal
+          demande={toDelete}
+          onConfirm={handleDelete}
+          onCancel={() => setToDelete(null)}
+        />
+      )}
 
-          <div className="form-card animate-slide-up" style={{ width: '100%', padding: '0', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+      <div className="animate-fade-in" style={{ maxWidth: 900, margin: '0 auto' }}>
+        {/* En-tête */}
+        <nav className="breadcrumbs animate-slide-up" style={{ marginBottom: 20 }}>
+          <span>Tableau de bord</span>
+          <ChevronRight size={13} />
+          <span className="active">Suivi des demandes</span>
+        </nav>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <h1 className="page-title">Suivi de vos demandes</h1>
+            <p className="page-subtitle" style={{ marginTop: 4 }}>Consultez et gérez l'état d'avancement de vos démarches administratives.</p>
+          </div>
+          <button onClick={fetchDemandes} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--text-sm)', cursor: 'pointer', color: 'var(--text-muted)', fontWeight: 600, fontFamily: 'var(--font)' }}>
+            <RefreshCw size={13} className={loading ? 'spin' : ''} /> Actualiser
+          </button>
+        </div>
+
+        {/* Tableau */}
+        <div className="form-card table-scroll" style={{ overflow: 'hidden' }}>
+          {loading ? (
+            <div style={{ padding: 48, textAlign: 'center' }}>
+              <div className="step-loader" style={{ margin: '0 auto 16px' }} />
+              <p style={{ color: 'var(--text-faint)', fontSize: 14 }}>Chargement de vos demandes...</p>
+            </div>
+          ) : documents.length === 0 ? (
+            <div style={{ padding: 48, textAlign: 'center' }}>
+              <FileText size={40} style={{ color: 'var(--text-faint)', margin: '0 auto 16px', display: 'block', opacity: 0.4 }} />
+              <p style={{ color: 'var(--text-faint)', fontSize: 14, fontWeight: 600 }}>Aucune demande en cours pour le moment.</p>
+              <p style={{ color: 'var(--text-faint)', fontSize: 12, marginTop: 6 }}>Cliquez sur "Nouvelle demande" pour commencer une démarche.</p>
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 580 }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid #EEEEEE', backgroundColor: '#F8F9FA' }}>
-                  <th style={{ padding: '16px 24px', fontSize: '13px', color: '#868E96' }}>TYPE DE DEMANDE</th>
-                  <th style={{ padding: '16px 24px', fontSize: '13px', color: '#868E96' }}>RÉFÉRENCE</th>
-                  <th style={{ padding: '16px 24px', fontSize: '13px', color: '#868E96' }}>DATE</th>
-                  <th style={{ padding: '16px 24px', fontSize: '13px', color: '#868E96' }}>STATUT</th>
+                <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border)' }}>
+                  {['Type de demande', 'Référence', 'Date', 'Statut', 'Action'].map(h => (
+                    <th key={h} style={{ padding: '12px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 0.6 }}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {documents.length === 0 && (
-                  <tr>
-                    <td colSpan={4} style={{ padding: '24px', fontSize: '14px', color: '#868E96' }}>
-                      Aucune demande en cours pour le moment.
-                    </td>
-                  </tr>
-                )}
-                {documents.map((doc) => {
-                  const rawStatutDemande = doc.statut_demande || '';
-                  const hasPrefix = rawStatutDemande.includes(':');
-                  const docTypeCode = hasPrefix ? rawStatutDemande.split(':')[0] : 'A';
-                  const cleanStatutDemande = hasPrefix ? rawStatutDemande.split(':')[1] : rawStatutDemande;
-
-                  const docNames = {
-                    'P': 'Passeport GN',
-                    'C': 'Carte d\'Identité GN',
-                    'A': 'Acte de Naissance GN',
-                    'E': 'Extrait de Naissance GN',
-                    'D': 'Permis de Conduire GN',
-                    'G': 'Carte Grise GN',
-                    'J': 'Casier Judiciaire GN',
-                    'N': 'Certificat de Nationalité GN'
-                  };
-
-                  const docName = docNames[docTypeCode] || 'Document Officiel GN';
-                  
-                  const statutValue = (doc.statut || '').toUpperCase();
-                  const statutDemandeValue = cleanStatutDemande.toUpperCase();
-                  const isDone =
-                    statutValue === 'GENERE' ||
-                    statutValue === 'GÉNÉRÉ' ||
-                    statutDemandeValue === 'TERMINEE' ||
-                    statutDemandeValue === 'TERMINÉE';
-                  const displayDate = doc.date_generation || doc.created_at;
+                {documents.map((doc, i) => {
+                  const stat = getStatut(doc);
+                  const sc = statutDisplay[stat];
+                  const canDelete = stat !== 'done'; // ne peut supprimer que si pas encore terminée
 
                   return (
-                    <tr key={doc.id} style={{ borderBottom: '1px solid #EEEEEE' }}>
-                      <td style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ padding: '10px', backgroundColor: isDone ? '#F1F3F5' : '#E7F6F0', color: isDone ? '#868E96' : '#006D44', borderRadius: '10px' }}>
-                          <FileText size={20} />
-                        </div>
-                        <div>
-                          <p style={{ fontWeight: '700', fontSize: '15px' }}>{docName}</p>
-                          <p style={{ fontSize: '13px', color: '#868E96' }}>Ref: {doc.id_acte || 'N/A'}</p>
+                    <tr key={doc.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? '#fff' : 'var(--bg-main)' }}>
+                      <td style={{ padding: '16px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{ padding: 9, background: stat === 'done' ? '#f5f5f5' : 'var(--primary-light)', color: stat === 'done' ? 'var(--text-faint)' : 'var(--primary)', borderRadius: 10, flexShrink: 0 }}>
+                            <FileText size={18} />
+                          </div>
+                          <div>
+                            <p style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-heading)', margin: 0 }}>{getDocName(doc)}</p>
+                            <p style={{ fontSize: 11, color: 'var(--text-faint)', margin: 0 }}>N° acte : {doc.id_acte || 'N/A'}</p>
+                          </div>
                         </div>
                       </td>
-                      <td style={{ padding: '24px', fontSize: '14px', fontFamily: 'monospace' }}>REQ-{doc.id}-GN</td>
-                      <td style={{ padding: '24px', fontSize: '14px' }}>{formatDate(displayDate)}</td>
-                      <td style={{ padding: '24px' }}>
-                        {!isDone ? (
-                          <span style={{ padding: '6px 12px', backgroundColor: '#FFF3BF', color: '#E67700', borderRadius: '100px', fontSize: '12px', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                            <Clock size={14} /> {cleanStatutDemande || 'En cours'}
-                          </span>
+                      <td style={{ padding: '16px 20px', fontSize: 12, fontFamily: 'monospace', color: 'var(--primary)', fontWeight: 600 }}>
+                        REQ-{doc.id?.substring(0, 8).toUpperCase()}-GN
+                      </td>
+                      <td style={{ padding: '16px 20px', fontSize: 13, color: 'var(--text-muted)' }}>
+                        {fmtDate(doc.date_generation || doc.created_at)}
+                      </td>
+                      <td style={{ padding: '16px 20px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 20, background: sc.bg, color: sc.color, fontWeight: 700, fontSize: 11 }}>
+                          {sc.icon} {sc.label}
+                        </span>
+                      </td>
+                      <td style={{ padding: '16px 20px' }}>
+                        {canDelete ? (
+                          <button
+                            onClick={() => setToDelete({ id: doc.id, ref: `REQ-${doc.id?.substring(0, 8).toUpperCase()}-GN` })}
+                            className="btn-danger"
+                            style={{ whiteSpace: 'nowrap' }}
+                          >
+                            <Trash2 size={13} /> Supprimer
+                          </button>
                         ) : (
-                          <span style={{ padding: '6px 12px', backgroundColor: '#E7F6F0', color: '#006D44', borderRadius: '100px', fontSize: '12px', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                            <CheckCircle size={14} /> Terminée
-                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--text-faint)', fontStyle: 'italic' }}>Finalisée</span>
                         )}
                       </td>
                     </tr>
@@ -139,10 +194,10 @@ const Tracking = () => {
                 })}
               </tbody>
             </table>
-          </div>
+          )}
         </div>
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 };
 

@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import Layout from '../components/layout/Layout';
 import { ChevronRight, Save, User, Mail, Lock, ShieldAlert, CheckCircle, Phone, MapPin, Calendar, Upload } from 'lucide-react';
-import Sidebar from '../components/layout/Sidebar';
-import Header from '../components/layout/Header';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -165,12 +164,8 @@ const Settings = () => {
   };
 
   return (
-    <div className="layout-wrapper">
-      <Sidebar />
-      <main className="main-content">
-        <Header />
-
-        <div className="form-page-content animate-fade-in">
+    <Layout>
+      <div className="form-page-content animate-fade-in">
           <nav className="breadcrumbs animate-slide-up" style={{ animationDelay: '0.1s' }}>
             <span>TABLEAU DE BORD</span> <ChevronRight size={14} />
             <span className="active">PARAMÈTRES</span>
@@ -331,8 +326,7 @@ const Settings = () => {
             </aside>
           </div>
         </div>
-      </main>
-    </div>
+    </Layout>
   );
 };
 

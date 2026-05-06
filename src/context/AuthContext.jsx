@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
       const savedUser = localStorage.getItem('identiguinee_user');
       return savedUser ? JSON.parse(savedUser) : null;
     } catch (e) {
-      console.error("Auth storage error:", e);
+
       return null;
     }
   });

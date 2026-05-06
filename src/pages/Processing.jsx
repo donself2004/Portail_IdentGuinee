@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Layout from '../components/layout/Layout';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle, BarChart2, ShieldCheck, Lock, Zap, Terminal, Database, Cpu, Link as LinkIcon, FileCheck } from 'lucide-react';
-import Sidebar from '../components/layout/Sidebar';
-import Header from '../components/layout/Header';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import './Processing.css';
@@ -152,7 +151,7 @@ const Processing = () => {
         }, TOTAL_DURATION);
         timers.push(finalTimer);
       } catch (err) {
-        console.error('Processing error details:', err);
+
         const errorMsg = err.message || 'Erreur de connexion';
         const errorDetail = err.details || "Problème d'accès à la base de données";
         addLog(`ERREUR: ${errorMsg}`, 'error');
@@ -182,12 +181,8 @@ const Processing = () => {
   ];
 
   return (
-    <div className="layout-wrapper">
-      <Sidebar />
-      <main className="main-content">
-        <Header />
-
-        <div className="processing-content animate-fade-in">
+    <Layout>
+      <div className="processing-content animate-fade-in">
           <div className="processing-header">
             <div className="system-status-badge animate-slide-up">
               <span className="pulse-dot"></span> INFRASTRUCTURE SOUVERAINE ACTIVE
@@ -266,8 +261,7 @@ const Processing = () => {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </Layout>
   );
 };
 

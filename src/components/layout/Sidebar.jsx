@@ -1,75 +1,87 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  FilePlus, 
-  Search, 
-  FolderOpen, 
-  LifeBuoy, 
-  Settings, 
-  LogOut 
+import React, { useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  LayoutDashboard, FilePlus, Search, FolderOpen,
+  LifeBuoy, Settings, LogOut, Bell, Layers, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import './Sidebar.css';
 
-const Sidebar = () => {
+const Sidebar = ({ open, onClose }) => {
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const location = useLocation();
-  const avatarSrc = user?.avatar || `https://ui-avatars.com/api/?name=${user?.prenom || 'Citoyen'}+${user?.nom || ''}&background=006D44&color=fff`;
+  const navigate = useNavigate();
 
-  const isActive = (path) => {
-    return location.pathname === path ? "nav-item active" : "nav-item";
-  };
+  const avatar = user?.avatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent((user?.prenom || 'C') + ' ' + (user?.nom || ''))}&background=006D44&color=fff`;
+
+  const isActive = path => location.pathname === path;
+
+  const handleLogout = () => { logout(); navigate('/'); };
+  const handleNav = () => { if (onClose) onClose(); };
+
+  // Fermer sur changement de route (mobile)
+  useEffect(() => { if (onClose) onClose(); }, [location.pathname]);
+
+  const NAV = [
+    { to: '/dashboard',        icon: <LayoutDashboard size={18} />, label: 'Tableau de bord' },
+    { to: '/nouvelle-demande', icon: <FilePlus size={18} />,        label: 'Nouvelle demande' },
+    { to: '/suivi',            icon: <Search size={18} />,          label: 'Suivi des demandes' },
+    { to: '/documents',        icon: <FolderOpen size={18} />,      label: 'Mes documents' },
+    { to: '/services',         icon: <Layers size={18} />,          label: 'Services' },
+  ];
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${open ? ' open' : ''}`}>
+      {/* Close btn mobile */}
+      <button className="sidebar-close" onClick={onClose} aria-label="Fermer le menu">
+        <X size={18} />
+      </button>
+
+      {/* Logo */}
       <div className="sidebar-brand">
-        <h1 className="logo-text">Identi<span>Guinée</span></h1>
+        <span className="sidebar-logo">Identi<em>Guinée</em></span>
+        <span className="sidebar-badge">Portail Citoyen</span>
       </div>
 
-      <div className="user-short-profile">
-        <img src={avatarSrc} alt="Profile" className="avatar-small" />
-        <div className="user-info">
-          <p className="user-name">{user?.prenom} {user?.nom}</p>
-          <p className="user-status">Citoyen Vérifié</p>
+      {/* Profil */}
+      <div className="sidebar-profile">
+        <img src={avatar} alt="avatar" className="sidebar-avatar" />
+        <div className="sidebar-profile-info">
+          <p className="sidebar-profile-name">{user?.prenom} {user?.nom}</p>
+          <p className="sidebar-profile-role">Citoyen Vérifié ✓</p>
         </div>
       </div>
 
+      {/* Navigation */}
       <nav className="sidebar-nav">
-        <div className="nav-group">
-          <Link to="/" className={isActive('/')}>
-            <LayoutDashboard size={20} />
-            <span>Tableau de bord</span>
+        <p className="sidebar-section-title">Navigation</p>
+        {NAV.map(item => (
+          <Link key={item.to} to={item.to} onClick={handleNav} className={`sidebar-link ${isActive(item.to) ? 'active' : ''}`}>
+            {item.icon}<span>{item.label}</span>
           </Link>
-          <Link to="/nouvelle-demande" className={isActive('/nouvelle-demande')}>
-            <FilePlus size={20} />
-            <span>Nouvelle demande</span>
-          </Link>
-          <Link to="/suivi" className={isActive('/suivi')}>
-            <Search size={20} />
-            <span>Suivi des demandes</span>
-          </Link>
-          <Link to="/documents" className={isActive('/documents')}>
-            <FolderOpen size={20} />
-            <span>Mes documents</span>
-          </Link>
-        </div>
-
-        <div className="nav-group bottom">
-          <Link to="/aide" className={`${isActive('/aide')} secondary`}>
-            <LifeBuoy size={20} />
-            <span>Aide & Support</span>
-          </Link>
-          <Link to="/parametres" className={`${isActive('/parametres')} secondary`}>
-            <Settings size={20} />
-            <span>Paramètres</span>
-          </Link>
-          <button onClick={logout} className="nav-item logout" style={{ width: '100%', textAlign: 'left' }}>
-            <LogOut size={20} />
-            <span>Déconnexion</span>
-          </button>
-        </div>
+        ))}
+        <Link to="/notifications" onClick={handleNav} className={`sidebar-link ${isActive('/notifications') ? 'active' : ''}`}>
+          <Bell size={18} /><span>Notifications</span>
+          {unreadCount > 0 && <span className="sidebar-badge-count">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+        </Link>
       </nav>
+
+      {/* Footer */}
+      <div className="sidebar-footer">
+        <p className="sidebar-section-title">Compte</p>
+        <Link to="/aide" onClick={handleNav} className={`sidebar-link ${isActive('/aide') ? 'active' : ''}`}>
+          <LifeBuoy size={18} /><span>Aide & Support</span>
+        </Link>
+        <Link to="/parametres" onClick={handleNav} className={`sidebar-link ${isActive('/parametres') ? 'active' : ''}`}>
+          <Settings size={18} /><span>Paramètres</span>
+        </Link>
+        <button onClick={handleLogout} className="sidebar-link sidebar-link-logout">
+          <LogOut size={18} /><span>Déconnexion</span>
+        </button>
+      </div>
     </aside>
   );
 };

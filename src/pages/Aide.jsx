@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
+import Layout from '../components/layout/Layout';
 import { ChevronRight, LifeBuoy, Mail, Phone, MessageSquare, Search, CheckCircle, Clock } from 'lucide-react';
-import Sidebar from '../components/layout/Sidebar';
-import Header from '../components/layout/Header';
 import './Aide.css';
 
 const faqs = [
@@ -72,12 +71,8 @@ const Aide = () => {
   };
 
   return (
-    <div className="layout-wrapper">
-      <Sidebar />
-      <main className="main-content">
-        <Header />
-
-        <div className="help-page-content animate-fade-in" style={{ padding: '24px 32px', maxWidth: 980, margin: '0 auto' }}>
+    <Layout>
+      <div className="help-page-content animate-fade-in" style={{ padding: '24px 32px', maxWidth: 980, margin: '0 auto' }}>
           <div style={{ marginBottom: 32 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
               <LifeBuoy size={28} color="#006D44" />
@@ -209,8 +204,7 @@ const Aide = () => {
             </div>
           )}
         </div>
-      </main>
-    </div>
+    </Layout>
   );
 };
 

@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, Component } from 'react';
+import Layout from '../components/layout/Layout';
 import { ChevronRight, Share2, Download, Smartphone, CheckCircle, Info, X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import Sidebar from '../components/layout/Sidebar';
-import Header from '../components/layout/Header';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import './DocumentGenere.css';
@@ -84,25 +83,18 @@ const DocumentGenereContent = () => {
 
   if (loading) {
     return (
-      <div className="layout-wrapper">
-        <Sidebar />
-        <main className="main-content">
-          <Header />
-          <div className="doc-page-content animate-fade-in" style={{ padding: 40, textAlign: 'center' }}>
-            <p>Chargement du document...</p>
-          </div>
-        </main>
-      </div>
+      <Layout>
+        <div style={{ padding: 48, textAlign: 'center' }}>
+          <div className="step-loader" style={{ margin: '0 auto 16px' }} />
+          <p style={{ color: 'var(--text-faint)', fontSize: 14 }}>Chargement du document...</p>
+        </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="layout-wrapper">
-      <Sidebar />
-      <main className="main-content">
-        <Header />
-
-        <div className="doc-page-content animate-fade-in">
+    <Layout>
+      <div className="doc-page-content animate-fade-in">
           <div className="doc-header-section animate-slide-up">
             <div className="doc-header-left">
               <nav className="breadcrumbs">
@@ -181,6 +173,22 @@ const DocumentGenereContent = () => {
                     <p className="stamp-label">Certificateur officiel</p>
                     <p className="stamp-ministry">Ministère de l'Administration du Territoire</p>
                   </div>
+                  {/* QR Code — vérification publique via /verify/:documentId */}
+                  <div style={{ textAlign: 'center' }}>
+                    <img
+                      src={
+                        'https://api.qrserver.com/v1/create-qr-code/?size=72x72&data=' +
+                        encodeURIComponent(
+                          window.location.origin + '/verify/' + (documentId || 'demo')
+                        )
+                      }
+                      style={{ width: 72, height: 72, display: 'block', margin: '0 auto 4px', borderRadius: 4 }}
+                      alt="QR Vérification"
+                    />
+                    <p style={{ fontSize: 8, color: '#888', margin: 0, lineHeight: 1.3, textAlign: 'center' }}>
+                      Scanner pour<br />vérifier l'authenticité
+                    </p>
+                  </div>
                   <p className="generation-timestamp">Généré le {new Date().toLocaleDateString('fr-FR')}</p>
                 </div>
               </div>
@@ -226,8 +234,7 @@ const DocumentGenereContent = () => {
             </div>
           )}
         </div>
-      </main>
-    </div>
+    </Layout>
   );
 };
 

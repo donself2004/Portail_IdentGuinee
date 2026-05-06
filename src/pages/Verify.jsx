@@ -1,159 +1,231 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Shield, CheckCircle, XCircle, FileText, ChevronLeft, Award } from 'lucide-react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { Shield, CheckCircle, XCircle, FileText, ChevronLeft, Calendar, MapPin, User, Hash, Clock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
+/**
+ * PAGE DE VÉRIFICATION PUBLIQUE
+ * Accessible via : /verify/:docId  ou  /verify?id=xxx&acte=GN-xxx
+ * Scannée par les organisations tiers via QR code imprimé sur le document.
+ * Retourne : AUTHENTIQUE ✓ ou NON AUTHENTIQUE ✗ en < 3 secondes.
+ */
 const Verify = () => {
   const { docId } = useParams();
-  const [loading, setLoading] = useState(true);
-  const [docData, setDocData] = useState(null);
-  const [citoyenData, setCitoyenData] = useState(null);
-  const [notFound, setNotFound] = useState(false);
+  const [searchParams] = useSearchParams();
+  const qpId   = searchParams.get('id');
+  const qpActe = searchParams.get('acte');
+
+  const targetId   = docId || qpId;
+  const targetActe = qpActe;
+
+  const [status, setStatus]     = useState('loading'); // 'loading' | 'authentic' | 'invalid'
+  const [doc, setDoc]           = useState(null);
+  const [citoyen, setCitoyen]   = useState(null);
+  const [acte, setActe]         = useState(null);
+  const [elapsed, setElapsed]   = useState(0);
 
   useEffect(() => {
-    const verifyDoc = async () => {
+    const t0 = Date.now();
+    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - t0) / 100) / 10), 100);
+
+    const verify = async () => {
       try {
-        setLoading(true);
-        
-        // 1. Chercher le document
-        const { data: doc, error: docError } = await supabase
-          .from('documents_certifies')
-          .select('*')
-          .eq('id', docId)
-          .single();
+        // ── Étape 1 : chercher le document certifié ──
+        if (targetId) {
+          const { data: d } = await supabase
+            .from('documents_certifies')
+            .select('*')
+            .eq('id', targetId)
+            .maybeSingle();
 
-        if (docError || !doc) {
-          setNotFound(true);
-          setLoading(false);
-          return;
+          if (d) {
+            setDoc(d);
+
+            // ── Étape 2 : citoyen ──
+            if (d.citoyen_id) {
+              const { data: c } = await supabase.from('citoyens').select('*').eq('id', d.citoyen_id).maybeSingle();
+              if (c) setCitoyen(c);
+            }
+
+            // ── Étape 3 : acte NaissanceChain ──
+            const acteId = d.id_acte || d.id_acte_lie;
+            if (acteId) {
+              const { data: a } = await supabase.from('naissancechain').select('*').eq('id_acte', acteId).maybeSingle();
+              if (a) setActe(a);
+            }
+
+            const statutOk = ['GENERE', 'GÉNÉRÉ', 'VALIDE', 'VALIDATED'].includes((d.statut || '').toUpperCase());
+            setStatus(statutOk ? 'authentic' : 'invalid');
+            clearInterval(timer);
+            return;
+          }
         }
 
-        setDocData(doc);
-
-        // 2. Chercher le citoyen associé
-        const { data: citoyen, error: citError } = await supabase
-          .from('citoyens')
-          .select('*')
-          .eq('id', doc.citoyen_id)
-          .single();
-
-        if (citoyen) {
-          setCitoyenData(citoyen);
+        // ── Fallback : chercher par numéro d'acte ──
+        if (targetActe) {
+          const { data: a } = await supabase.from('naissancechain').select('*').eq('id_acte', targetActe).maybeSingle();
+          if (a) {
+            setActe(a);
+            setStatus('authentic');
+            clearInterval(timer);
+            return;
+          }
         }
 
-        setLoading(false);
-      } catch (err) {
-        console.error("Verification error:", err);
-        setNotFound(true);
-        setLoading(false);
+        setStatus('invalid');
+        clearInterval(timer);
+      } catch {
+        setStatus('invalid');
+        clearInterval(timer);
       }
     };
 
-    if (docId) {
-      verifyDoc();
-    }
-  }, [docId]);
+    verify();
+    return () => clearInterval(timer);
+  }, [targetId, targetActe]);
 
-  if (loading) {
+  const fmtDate = (v) => v
+    ? new Date(v).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '—';
+
+  // ── État chargement ──
+  if (status === 'loading') {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8F9FA', padding: '20px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="step-loader" style={{ margin: '0 auto 20px' }}></div>
-          <p style={{ color: '#868E96', fontWeight: '500' }}>Vérification de l'authenticité sur NaissanceChain...</p>
+      <div style={{ minHeight: '100vh', background: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ textAlign: 'center', maxWidth: 360 }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <Shield size={32} color="var(--primary)" className="pulse" />
+          </div>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-heading)', margin: '0 0 8px' }}>Vérification en cours...</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 20px' }}>Consultation du Registre National NaissanceChain</p>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '12px 20px', border: '1px solid var(--border)', display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+            <Clock size={14} color="var(--text-faint)" />
+            <span style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--primary)', fontWeight: 700 }}>{elapsed.toFixed(1)}s</span>
+            <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>/ objectif &lt; 3s</span>
+          </div>
+          <div style={{ marginTop: 20, height: 4, background: '#eee', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ height: '100%', background: 'var(--primary)', borderRadius: 2, animation: 'scan-progress 2.5s ease-in-out forwards' }} />
+          </div>
         </div>
+        <style>{`@keyframes scan-progress { from { width: 0%; } to { width: 95%; } }`}</style>
       </div>
     );
   }
 
-  if (notFound) {
+  // ── DOCUMENT INVALIDE / NON TROUVÉ ──
+  if (status === 'invalid') {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#FFF5F5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ maxWidth: '480px', width: '100%', backgroundColor: '#FFFFFF', padding: '40px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(201, 42, 42, 0.1)', textAlign: 'center' }}>
-          <XCircle size={64} color="#C92A2A" style={{ marginBottom: '24px' }} />
-          <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1A1A1A', marginBottom: '12px' }}>Document Non Authentique</h1>
-          <p style={{ color: '#868E96', lineHeight: '1.6', marginBottom: '32px' }}>
-            Ce document ne figure pas dans le registre national sécurisé. Il pourrait s'agir d'une contrefaçon ou d'une erreur de lecture.
+      <div style={{ minHeight: '100vh', background: '#fff5f5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ maxWidth: 460, width: '100%', background: '#fff', padding: '40px 36px', borderRadius: 24, boxShadow: '0 20px 48px rgba(206,17,38,0.12)', textAlign: 'center' }}>
+          <div style={{ width: 72, height: 72, background: 'var(--danger-light)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <XCircle size={40} color="var(--danger)" />
+          </div>
+          <div style={{ background: 'var(--danger)', color: '#fff', padding: '6px 16px', borderRadius: 20, fontSize: 11, fontWeight: 800, letterSpacing: 1.5, display: 'inline-block', marginBottom: 16 }}>
+            ✗ NON AUTHENTIQUE
+          </div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-heading)', margin: '0 0 12px' }}>Document Non Reconnu</h1>
+          <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, fontSize: 14, margin: '0 0 8px' }}>
+            Ce document <strong>ne figure pas</strong> dans le registre national sécurisé NaissanceChain de la République de Guinée.
           </p>
-          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#006D44', fontWeight: '700', textDecoration: 'none' }}>
-            <ChevronLeft size={18} /> Retour au portail
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '0 0 28px' }}>
+            Il pourrait s'agir d'un document <strong style={{ color: 'var(--danger)' }}>falsifié</strong>, d'une erreur de lecture QR ou d'un document non encore enregistré.
+          </p>
+          <div style={{ background: '#f8f9fa', borderRadius: 12, padding: '14px 18px', marginBottom: 24, textAlign: 'left' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: 0.5 }}>ID scanné</p>
+            <p style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--text-heading)', margin: 0, wordBreak: 'break-all' }}>{targetId || targetActe || 'Identifiant non lisible'}</p>
+          </div>
+          <p style={{ fontSize: 12, color: '#888', margin: '0 0 20px' }}>En cas de doute, contactez le Ministère de la Justice : <strong>+224 655 00 00 00</strong></p>
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--primary)', fontWeight: 700, textDecoration: 'none', fontSize: 14 }}>
+            <ChevronLeft size={16} /> Retour au portail
           </Link>
         </div>
       </div>
     );
   }
 
-  // Déterminer le type de document pour l'affichage
-  const docTypeCode = docData.statut_demande?.split(':')[0] || 'A';
-  const docNames = {
-    'P': 'Passeport Biométrique',
-    'C': 'Carte d\'Identité Biométrique',
-    'A': 'Acte de Naissance',
-    'E': 'Extrait de Naissance'
-  };
-  const docName = docNames[docTypeCode] || 'Document Officiel';
+  // ── DOCUMENT AUTHENTIQUE ──
+  const nom    = acte?.prenom && acte?.nom ? `${acte.prenom} ${acte.nom}` : citoyen?.prenom && citoyen?.nom ? `${citoyen.prenom} ${citoyen.nom}` : 'Non communiqué';
+  const fields = [
+    { icon: <User size={15} />,     label: 'Nom complet',         val: nom },
+    { icon: <Calendar size={15} />, label: 'Date de naissance',   val: fmtDate(acte?.date_naissance || citoyen?.date_naissance) },
+    { icon: <MapPin size={15} />,   label: 'Lieu de naissance',   val: acte?.lieu_naissance || '—' },
+    { icon: <FileText size={15} />, label: 'Numéro d\'acte',      val: doc?.id_acte || acte?.id_acte || targetActe || '—' },
+    { icon: <Hash size={15} />,     label: 'Référence document',  val: doc?.id ? `DOC-${doc.id.substring(0, 12).toUpperCase()}` : '—' },
+    { icon: <Clock size={15} />,    label: 'Date d\'émission',    val: fmtDate(doc?.date_generation || doc?.created_at) },
+  ];
+
+  const hashBC = acte?.hash_blockchain || doc?.hash_document || null;
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#F1F3F5', padding: '40px 20px' }}>
-      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: '#E7F6F0', color: '#006D44', borderRadius: '100px', fontWeight: '700', fontSize: '13px', marginBottom: '16px' }}>
-            <Shield size={16} /> SYSTÈME SOUVERAIN DE VÉRIFICATION
+    <div style={{ minHeight: '100vh', background: '#f0fdf4', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'var(--font)' }}>
+      <div style={{ maxWidth: 520, width: '100%' }}>
+
+        {/* Badge AUTHENTIQUE */}
+        <div style={{ background: '#fff', borderRadius: 24, padding: '32px 28px', boxShadow: '0 20px 48px rgba(0,109,68,0.12)', marginBottom: 20 }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ width: 72, height: 72, background: 'var(--primary-light)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', border: '3px solid var(--primary-border)' }}>
+              <CheckCircle size={40} color="var(--primary)" fill="var(--primary)" style={{ color: '#fff' }} />
+            </div>
+            <div style={{ background: 'var(--primary)', color: '#fff', padding: '6px 20px', borderRadius: 20, fontSize: 12, fontWeight: 800, letterSpacing: 1.5, display: 'inline-block', marginBottom: 12 }}>
+              ✓ DOCUMENT AUTHENTIQUE
+            </div>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-heading)', margin: '0 0 6px' }}>Vérification réussie</h1>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+              Ce document est <strong style={{ color: 'var(--primary)' }}>officiellement enregistré</strong> dans le Registre National NaissanceChain de la République de Guinée.
+            </p>
           </div>
-          <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#1A1A1A' }}>Authentification du Document</h2>
+
+          {/* Temps de réponse */}
+          <div style={{ background: 'var(--primary-light)', borderRadius: 10, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
+            <Clock size={16} color="var(--primary)" />
+            <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700 }}>Vérification effectuée en {elapsed.toFixed(1)} seconde{elapsed >= 2 ? 's' : ''}</span>
+          </div>
+
+          {/* Infos du document */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 22 }}>
+            {fields.map(f => (
+              <div key={f.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--bg-main)', borderRadius: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-faint)' }}>
+                  {f.icon}
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4 }}>{f.label}</span>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-heading)', textAlign: 'right', maxWidth: '55%', wordBreak: 'break-all' }}>{f.val}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Hash blockchain */}
+          {hashBC && (
+            <div style={{ background: '#0a2e1a', borderRadius: 12, padding: '14px 16px', marginBottom: 22 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 0.8, margin: '0 0 6px' }}>Empreinte Blockchain (SHA-256)</p>
+              <p style={{ fontSize: 11, fontFamily: 'monospace', color: '#69f0ae', margin: 0, wordBreak: 'break-all', lineHeight: 1.6 }}>{hashBC}</p>
+            </div>
+          )}
+
+          {/* Signature officielle */}
+          <div style={{ border: '2px solid var(--primary-border)', borderRadius: 12, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', margin: '0 0 2px' }}>🇬🇳 RÉPUBLIQUE DE GUINÉE</p>
+              <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: 0 }}>Ministère de la Justice — DGAE</p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-faint)', margin: '0 0 2px' }}>Système</p>
+              <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--primary)', margin: 0 }}>NaissanceChain v2</p>
+            </div>
+          </div>
         </div>
 
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
-          {/* Header de succès */}
-          <div style={{ backgroundColor: '#006D44', padding: '32px', textAlign: 'center', color: '#FFFFFF' }}>
-            <CheckCircle size={48} style={{ marginBottom: '12px' }} />
-            <h3 style={{ fontSize: '20px', fontWeight: '800' }}>DOCUMENT AUTHENTIQUE</h3>
-            <p style={{ opacity: 0.8, fontSize: '14px', marginTop: '4px' }}>Validé par NaissanceChain & MATD</p>
-          </div>
-
-          {/* Détails du document */}
-          <div style={{ padding: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px', paddingBottom: '24px', borderBottom: '1px solid #F1F3F5' }}>
-              <div style={{ width: '60px', height: '60px', backgroundColor: '#F8F9FA', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#006D44' }}>
-                <FileText size={32} />
-              </div>
-              <div>
-                <h4 style={{ fontSize: '18px', fontWeight: '800', color: '#1A1A1A' }}>{docName}</h4>
-                <p style={{ fontSize: '13px', color: '#868E96' }}>ID Système: REQ-{docData.id}-GN</p>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '4px' }}>Titulaire</label>
-                <p style={{ fontSize: '15px', fontWeight: '700', color: '#1A1A1A' }}>{citoyenData?.prenom} {citoyenData?.nom}</p>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '4px' }}>Nationalité</label>
-                <p style={{ fontSize: '15px', fontWeight: '700', color: '#1A1A1A' }}>Guinéenne</p>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '4px' }}>Date d'émission</label>
-                <p style={{ fontSize: '15px', fontWeight: '700', color: '#1A1A1A' }}>{new Date(docData.date_generation).toLocaleDateString('fr-FR')}</p>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '4px' }}>Référence Acte</label>
-                <p style={{ fontSize: '15px', fontWeight: '700', color: '#1A1A1A' }}>{docData.id_acte || 'N/A'}</p>
-              </div>
-            </div>
-
-            <div style={{ marginTop: '32px', padding: '20px', backgroundColor: '#F8F9FA', borderRadius: '16px', display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <div style={{ color: '#006D44' }}><Award size={24} /></div>
-              <p style={{ fontSize: '13px', color: '#495057', lineHeight: '1.5' }}>
-                Ce document a été scellé par empreinte numérique sur la blockchain nationale. 
-                Toute modification physique ou numérique du document le rendrait invalide.
-              </p>
-            </div>
-          </div>
-
-          <div style={{ padding: '24px', textAlign: 'center', borderTop: '1px solid #F1F3F5' }}>
-             <p style={{ fontSize: '12px', color: '#ADB5BD' }}>© 2026 République de Guinée - Direction Générale de la Police Nationale</p>
-          </div>
+        {/* Footer */}
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: 11, color: '#999', margin: '0 0 12px' }}>
+            Vérification effectuée le {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} à {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          </p>
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--primary)', fontWeight: 700, textDecoration: 'none', fontSize: 13 }}>
+            <ChevronLeft size={15} /> Retour au portail IdentiGuinée
+          </Link>
         </div>
+
       </div>
     </div>
   );

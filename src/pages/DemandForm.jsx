@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import Layout from '../components/layout/Layout';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronRight, Info, CheckCircle, AlertCircle,
   UploadCloud, CreditCard, Calendar, FileText, Car, FileCheck
 } from 'lucide-react';
-import Sidebar from '../components/layout/Sidebar';
-import Header from '../components/layout/Header';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import './DemandForm.css';
@@ -262,19 +261,15 @@ const DemandForm = () => {
 
       navigate('/traitement', { state: { documentId: docData?.id, num_acte: formData.num_acte, type_document: formData.type_document } });
     } catch (err) {
-      console.error(err);
+
       setSubmitError(`Erreur : ${err.message || 'Une erreur inattendue est survenue.'}`);
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="layout-wrapper">
-      <Sidebar />
-      <main className="main-content">
-        <Header />
-
-        <div className="form-page-content animate-fade-in">
+    <Layout>
+      <div className="form-page-content animate-fade-in">
           <nav className="breadcrumbs animate-slide-up" style={{ animationDelay: '0.1s' }}>
             <span>TABLEAU DE BORD</span> <ChevronRight size={14} />
             <span className="active">NOUVELLE DEMANDE</span>
@@ -797,8 +792,7 @@ const DemandForm = () => {
             </aside>
           </div>
         </div>
-      </main>
-    </div>
+    </Layout>
   );
 };
 

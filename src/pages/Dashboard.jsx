@@ -1,6 +1,5 @@
 import React from 'react';
-import Sidebar from '../components/layout/Sidebar';
-import Header from '../components/layout/Header';
+import Layout from '../components/layout/Layout';
 import HeroBanner from '../components/dashboard/HeroBanner';
 import StatCard from '../components/dashboard/StatCard';
 import ServiceCard from '../components/dashboard/ServiceCard';
@@ -23,7 +22,7 @@ const Dashboard = () => {
       let searchId = user.id_acte_lie;
       
       if (!searchId) {
-        console.log("Tentative de récupération de l'acte via l'identité...");
+
         const { data: findActe } = await supabase
           .from('naissancechain')
           .select('id_acte')
@@ -37,7 +36,7 @@ const Dashboard = () => {
       }
 
       if (searchId) {
-        console.log("Synchronisation blockchain pour l'acte:", searchId);
+
         const { data: chainData } = await supabase
           .from('naissancechain')
           .select('*')
@@ -94,13 +93,8 @@ const Dashboard = () => {
   }, [user?.id, user?.date_naissance, user?.id_acte_lie]);
 
   return (
-    <div className="layout-wrapper">
-      <Sidebar />
-      
-      <main className="main-content">
-        <Header />
-        
-        <div className="dashboard-content animate-fade-in">
+    <Layout>
+      <div className="dashboard-content animate-fade-in">
           <div className="hero-row animate-slide-up" style={{ animationDelay: '0.1s' }}>
             <HeroBanner />
             <div className="stats-column">
@@ -161,8 +155,7 @@ const Dashboard = () => {
             <SupportCard />
           </div>
         </div>
-      </main>
-    </div>
+    </Layout>
   );
 };
 

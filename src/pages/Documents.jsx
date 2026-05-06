@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import Layout from '../components/layout/Layout';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { ChevronRight, FileCode2, Download, Shield } from 'lucide-react';
-import Sidebar from '../components/layout/Sidebar';
-import Header from '../components/layout/Header';
 import { supabase } from '../lib/supabase';
 
 const Documents = () => {
@@ -38,12 +37,8 @@ const Documents = () => {
     });
 
   return (
-    <div className="layout-wrapper">
-      <Sidebar />
-      <main className="main-content">
-        <Header />
-        
-        <div className="processing-content animate-fade-in" style={{ alignItems: 'flex-start', textAlign: 'left' }}>
+    <Layout>
+      <div className="processing-content animate-fade-in" style={{ alignItems: 'flex-start', textAlign: 'left' }}>
           <nav className="breadcrumbs animate-slide-up">
             <span>TABLEAU DE BORD</span> <ChevronRight size={14} />
             <span className="active">MES DOCUMENTS</span>
@@ -133,8 +128,7 @@ const Documents = () => {
           })}
           </div>
         </div>
-      </main>
-    </div>
+    </Layout>
   );
 };
 

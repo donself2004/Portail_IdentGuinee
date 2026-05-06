@@ -1,7 +1,6 @@
 import React from 'react';
+import Layout from '../components/layout/Layout';
 import { ChevronRight, Shield, CreditCard, FileText, FileCheck, Car, Briefcase, Globe } from 'lucide-react';
-import Sidebar from '../components/layout/Sidebar';
-import Header from '../components/layout/Header';
 import ServiceCard from '../components/dashboard/ServiceCard';
 
 const Services = () => {
@@ -73,12 +72,8 @@ const Services = () => {
   ];
 
   return (
-    <div className="layout-wrapper">
-      <Sidebar />
-      <main className="main-content">
-        <Header />
-        
-        <div className="processing-content animate-fade-in" style={{ alignItems: 'flex-start', textAlign: 'left' }}>
+    <Layout>
+      <div className="processing-content animate-fade-in" style={{ alignItems: 'flex-start', textAlign: 'left' }}>
           <nav className="breadcrumbs animate-slide-up">
             <span>TABLEAU DE BORD</span> <ChevronRight size={14} />
             <span className="active">CATALOGUE DES SERVICES</span>
@@ -127,8 +122,7 @@ const Services = () => {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+    </Layout>
   );
 };
 
