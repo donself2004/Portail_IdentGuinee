@@ -152,7 +152,7 @@ const Login = () => {
           telephone:     data.telephone,
           email:         data.email,
           matricule:     data.id_acte_lie || `GN-${data.id}`,
-          avatar:        data.avatar || data.avatar_url || data.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent((enriched.prenom || '') + ' ' + (enriched.nom || ''))}&background=006D44&color=fff`,
+          avatar:        data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent((enriched.prenom || '') + ' ' + (enriched.nom || ''))}&background=006D44&color=fff`,
           id_acte_lie:   data.id_acte_lie,
         });
         navigate('/dashboard');

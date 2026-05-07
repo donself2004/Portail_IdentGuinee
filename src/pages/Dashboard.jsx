@@ -56,11 +56,9 @@ const Dashboard = () => {
           // On récupère aussi le téléphone depuis citoyens si possible
           const { data: citoyenFull } = await supabase
             .from('citoyens')
-            .select('telephone, avatar, avatar_url, photo_url')
+            .select('telephone')
             .eq('id', user.id)
             .single();
-
-          const dbAvatar = citoyenFull?.avatar || citoyenFull?.avatar_url || citoyenFull?.photo_url;
 
           // Mise à jour du contexte pour toute l'application
           updateUser({
@@ -72,8 +70,7 @@ const Dashboard = () => {
             nom: chainData.nom,
             prenom: chainData.prenom,
             genre: chainData.genre,
-            telephone: citoyenFull?.telephone || user.telephone,
-            avatar: dbAvatar || user.avatar
+            telephone: citoyenFull?.telephone || user.telephone
           });
           
           // Sauvegarde en base de données citoyens pour la persistance

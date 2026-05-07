@@ -265,6 +265,7 @@ export const AdminDemandeDetail = () => {
   );
 };
 
+// ── Liste de toutes les demandes ──
 const AdminDemandes = () => {
   const navigate = useNavigate();
   const [demandes, setDemandes] = useState([]);
@@ -401,7 +402,7 @@ const AdminDemandes = () => {
                     <button style={{ background: '#006D44', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                       Voir détail
                     </button>
-                    <a href={'/verify/' + (d.hash || d.id_doc || d.id)} target='_blank' rel='noreferrer' style={{ background: '#f0fdf4', color: '#006D44', border: '1px solid #c3e6cb', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <a href={'/verify/' + d.id} target='_blank' rel='noreferrer' style={{ background: '#f0fdf4', color: '#006D44', border: '1px solid #c3e6cb', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <ExternalLink size={12} /> Vérifier
                     </a>
                   </div>

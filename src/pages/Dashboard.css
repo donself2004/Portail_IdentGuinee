@@ -65,19 +65,3 @@
     grid-template-columns: 1fr;
   }
 }
-
-@media (max-width: 768px) {
-  .dashboard-content {
-    gap: 32px;
-  }
-  .stats-column {
-    flex-direction: column;
-  }
-  .services-grid {
-    grid-template-columns: 1fr;
-  }
-  .hero-row {
-    gap: 16px;
-  }
-}
-

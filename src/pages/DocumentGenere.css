@@ -1,477 +1,475 @@
-/* ════════════════════════════════════════════════════
-   DocumentGenere.css — Design documents officiels guinéens
-════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   DocumentGenere.css — Design officiel guinéen v3
+═══════════════════════════════════════════════════════ */
 
 /* ── Layout page ── */
-.doc-page-content {
-  max-width: 900px;
-  margin: 0 auto;
-}
+.doc-page-wrap { max-width: 860px; margin: 0 auto; }
 
-.doc-header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 28px;
+.doc-top-bar {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  flex-wrap: wrap; gap: 16px; margin-bottom: 28px;
 }
+.doc-actions-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
-.doc-header-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.btn-secondary-doc {
+.doc-btn-secondary {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 9px 18px; background: var(--bg-card);
   border: 1px solid var(--border); border-radius: var(--radius-sm);
-  font-size: var(--text-sm); font-weight: 600; cursor: pointer;
+  font-size: 13px; font-weight: 600; cursor: pointer;
   color: var(--text-main); font-family: var(--font); transition: background 0.15s;
 }
-.btn-secondary-doc:hover { background: var(--bg-main); }
+.doc-btn-secondary:hover { background: var(--bg-main); }
 
-.btn-primary-doc {
+.doc-btn-primary {
   display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 18px; background: var(--primary); color: #fff;
+  padding: 9px 20px; background: var(--primary); color: #fff;
   border: none; border-radius: var(--radius-sm);
-  font-size: var(--text-sm); font-weight: 700; cursor: pointer;
+  font-size: 13px; font-weight: 700; cursor: pointer;
   font-family: var(--font); transition: opacity 0.2s;
 }
-.btn-primary-doc:hover { opacity: 0.88; }
+.doc-btn-primary:hover { opacity: 0.88; }
+.doc-btn-primary:disabled { opacity: 0.6; cursor: wait; }
 
-.document-wrapper {
-  background: #fff;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-md);
-  padding: 32px;
-  margin-bottom: 24px;
-}
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* Hash blockchain */
-.hash-display {
-  background: #0a2e1a; border-radius: 12px;
-  padding: 14px 18px; margin-bottom: 24px;
-}
-.hash-label {
-  font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6);
-  text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px;
-}
-.hash-value {
-  font-family: 'Courier New', monospace; font-size: 11px;
-  color: #69f0ae; word-break: break-all; line-height: 1.6;
+/* Zone imprimable */
+.doc-print-zone {
+  background: #fff; border-radius: 16px;
+  border: 1px solid var(--border); box-shadow: var(--shadow-md);
+  padding: 32px; margin-bottom: 20px;
 }
 
-/* Wallet */
-.wallet-panel {
+/* Hash */
+.doc-hash-bar {
+  background: #0a2e1a; border-radius: 12px; padding: 14px 18px;
+  margin-bottom: 20px; display: flex; flex-direction: column; gap: 6px;
+}
+.doc-hash-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.55); text-transform: uppercase; letter-spacing: 0.6px; }
+.doc-hash-val { font-family: 'Courier New', monospace; font-size: 11px; color: #69f0ae; word-break: break-all; line-height: 1.6; }
+
+/* Portefeuille */
+.doc-wallet-panel {
   background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 18px 20px;
+  border-radius: 16px; padding: 18px 20px;
   display: flex; justify-content: space-between; align-items: center;
   flex-wrap: wrap; gap: 14px; margin-bottom: 24px;
 }
-.wallet-info-card {
-  display: flex; align-items: flex-start; gap: 12px; color: var(--primary);
-}
-.wallet-modal {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+
+/* Modal */
+.doc-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
   z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 24px;
 }
-.wallet-modal-card {
+.doc-modal-card {
   background: #fff; border-radius: 20px; padding: 32px;
   max-width: 400px; width: 100%; position: relative;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.22);
 }
-.wallet-close {
-  position: absolute; top: 16px; right: 16px;
+.doc-modal-close {
+  position: absolute; top: 14px; right: 14px;
   background: var(--bg-main); border: 1px solid var(--border);
-  border-radius: 8px; padding: 6px; cursor: pointer;
-  display: flex; align-items: center;
+  border-radius: 8px; padding: 5px; cursor: pointer; display: flex; align-items: center;
 }
 
-/* ════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════
    CARTE NATIONALE D'IDENTITÉ CEDEAO
-════════════════════════════════════════════════════ */
-.doc-cni-card {
-  position: relative;
-  background: linear-gradient(135deg, #e8f5e2 0%, #f0f8ec 40%, #e0f0d8 70%, #d8ecd0 100%);
-  border-radius: 14px;
-  border: 2px solid #c5e0b0;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
-  max-width: 640px;
-  margin: 0 auto;
-  box-shadow: 0 4px 20px rgba(0,109,44,0.15);
+   Design fidèle : en-tête rouge-orange, fond vert clair,
+   photo gauche, données centre, empreinte droite
+══════════════════════════════════════════════════ */
+.cni-card {
+  max-width: 760px; margin: 0 auto;
+  font-family: Arial, Helvetica, sans-serif;
+  display: flex; flex-direction: column; gap: 24px;
 }
 
-.cni-header {
-  background: linear-gradient(90deg, #D84315 0%, #E64A19 40%, #BF360C 100%);
-  padding: 10px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* RECTO */
+.cni-recto {
+  border: 2px solid #c0d8b0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(150deg, #d8f0d0 0%, #e8f8e0 30%, #f0fce8 60%, #ddf0d5 100%);
+  box-shadow: 0 6px 24px rgba(0,109,44,0.12), inset 0 0 80px rgba(0,109,44,0.04);
+  position: relative;
 }
-.cni-header-left { display: flex; align-items: center; gap: 10px; }
-.cni-ecowas-logo { font-size: 28px; filter: brightness(1.2); }
-.cni-republic {
-  font-size: 13px; font-weight: 900; color: #fff;
-  letter-spacing: 0.5px; text-transform: uppercase;
+
+/* Watermark carte */
+.cni-recto::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(
+    45deg, transparent, transparent 20px,
+    rgba(0,109,44,0.03) 20px, rgba(0,109,44,0.03) 21px
+  );
+  pointer-events: none; z-index: 0;
 }
-.cni-type {
-  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.9);
+
+/* En-tête orange */
+.cni-header-bar {
+  background: linear-gradient(90deg, #D84315 0%, #E64A19 50%, #C62828 100%);
+  padding: 10px 16px 10px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: relative; z-index: 1;
+}
+.cni-header-left-col { display: flex; align-items: center; gap: 10px; }
+.cni-ecowas-logo { flex-shrink: 0; }
+.cni-republic-name {
+  font-size: 14px; font-weight: 900; color: #fff;
+  letter-spacing: 0.8px; line-height: 1.2;
+}
+.cni-card-type-main {
+  font-size: 9.5px; font-weight: 700; color: rgba(255,255,255,0.95);
   letter-spacing: 0.3px;
 }
-.cni-type-en { font-size: 7px; color: rgba(255,255,255,0.7); }
+.cni-card-type-sub { font-size: 7px; color: rgba(255,255,255,0.75); line-height: 1.4; }
 
-/* Drapeau Guinée */
-.cni-flag, .cni-flag-small {
-  display: flex; flex-direction: column; height: 34px; width: 22px;
-  border-radius: 2px; overflow: hidden; flex-shrink: 0;
+/* Drapeau */
+.cni-flag-strip {
+  display: flex; flex-direction: column;
+  height: 40px; width: 28px; border-radius: 3px; overflow: hidden; flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
-.cni-flag-small { height: 22px; width: 14px; }
-.flag-r { flex: 1; background: #CE1126; }
-.flag-g { flex: 1; background: #FCD116; }
-.flag-b { flex: 1; background: #009A44; }
-.flag-r.sm, .flag-g.sm, .flag-b.sm { /* même style */ }
+.cni-flag-strip.sm { height: 26px; width: 18px; }
 
-.cni-body {
-  display: flex;
-  padding: 14px 16px 12px;
-  gap: 16px;
+/* Corps recto */
+.cni-body-row {
+  display: flex; gap: 0; padding: 14px 14px 12px;
   position: relative; z-index: 1;
 }
 
-.cni-photo-col {
-  display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0;
+.cni-photo-section {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; flex-shrink: 0; width: 110px;
 }
-.cni-photo {
-  width: 90px; height: 110px; object-fit: cover;
-  border: 2px solid #006D44; border-radius: 4px;
-  background: #f0f0f0;
+.cni-photo-frame {
+  width: 96px; height: 118px;
+  border: 2px solid #006D44; border-radius: 3px;
+  overflow: hidden; background: #e0e0e0;
+  display: flex; align-items: center; justify-content: center;
 }
-.cni-sig-label { font-size: 7px; color: #555; }
-.cni-sig-line {
-  width: 90px; height: 1px; background: #333;
-  margin-top: 2px;
+.cni-photo-img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
 }
+.cni-sig-block { width: 96px; text-align: center; }
+.cni-sig-label-txt { font-size: 7px; color: #555; font-style: italic; }
+.cni-sig-line-draw { height: 1px; background: #333; margin-top: 4px; }
 
-.cni-data-col { flex: 1; }
-.cni-right-col {
-  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
-  flex-shrink: 0; min-width: 80px;
+.cni-data-section { flex: 1; padding: 0 12px; }
+.cni-field { margin-bottom: 6px; }
+.cni-field-row { display: flex; justify-content: space-between; align-items: flex-start; }
+.cni-field.right-align { text-align: right; }
+.cni-two-col { display: flex; justify-content: space-between; gap: 16px; }
+.cni-field-label {
+  font-size: 7.5px; color: #444; font-style: italic; line-height: 1.3; display: block;
 }
+.cni-field-value {
+  font-size: 11px; color: #0a0a0a; line-height: 1.4; display: block;
+}
+.cni-field-value.large { font-size: 13px; font-weight: 800; }
+.cni-field-value.mono { font-family: 'Courier New', monospace; font-size: 10.5px; letter-spacing: 0.5px; }
 
-.cni-field {
-  display: flex; flex-direction: column; margin-bottom: 5px;
+.cni-thumb-col {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  flex-shrink: 0; width: 72px; padding-top: 4px;
 }
-.cni-label {
-  font-size: 7.5px; color: #444; font-style: italic;
-  line-height: 1.2;
-}
-.cni-value {
-  font-size: 10.5px; color: #111; line-height: 1.3;
-}
-.cni-value.bold { font-weight: 800; font-size: 12px; }
-.cni-value.mono { font-family: 'Courier New', monospace; font-size: 10px; }
-
-.cni-thumb-area { margin-top: 8px; text-align: right; }
 .cni-thumb-box {
-  width: 44px; height: 56px; border: 1px solid #aaa;
-  border-radius: 4px; display: flex; align-items: center;
-  justify-content: center; font-size: 20px; background: rgba(255,255,255,0.6);
-  margin-left: auto;
+  width: 60px; height: 74px;
+  border: 1px solid #bbb; border-radius: 4px;
+  background: rgba(255,255,255,0.6);
+  display: flex; align-items: center; justify-content: center;
 }
-.cni-thumb-label { font-size: 7px; color: #888; margin-top: 2px; }
+.cni-thumb-label { font-size: 7px; color: #888; }
 
-.cni-watermark {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  font-size: 120px; opacity: 0.04; z-index: 0; pointer-events: none;
-  color: #006D44;
+/* VERSO CNI */
+.cni-verso {
+  border: 2px solid #c0d8b0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(150deg, #d8f0d0 0%, #e8f8e0 40%, #f0fce8 70%, #ddf0d5 100%);
+  box-shadow: 0 6px 24px rgba(0,109,44,0.12);
 }
-
-/* Verso CNI */
-.doc-cni-verso {
-  background: linear-gradient(135deg, #e8f5e2 0%, #f0f8ec 40%, #e0f0d8 100%);
-  border-radius: 14px; border: 2px solid #c5e0b0;
-  overflow: hidden; font-family: Arial, sans-serif;
-  max-width: 640px; margin: 0 auto;
-  box-shadow: 0 4px 20px rgba(0,109,44,0.15);
-}
-.cni-verso-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 16px; background: rgba(255,255,255,0.4);
+.cni-verso-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px;
   border-bottom: 1px solid rgba(0,109,44,0.15);
+  background: rgba(255,255,255,0.35);
 }
-.cni-chip { font-size: 24px; }
-.cni-verso-title { text-align: center; }
-.cni-code-pays { font-size: 10px; font-weight: 700; color: #006D44; }
-.cni-autorite { font-size: 9px; color: #333; font-style: italic; }
-.cni-republic-small { font-size: 11px; font-weight: 900; color: #CE1126; letter-spacing: 0.5px; }
+.cni-verso-chip { flex-shrink: 0; }
+.cni-verso-authority { text-align: center; flex: 1; }
+.cni-verso-gin { font-size: 11px; font-weight: 800; color: #006D44; }
+.cni-verso-dgpn { font-size: 8.5px; color: #333; font-style: italic; }
+.cni-verso-republic { font-size: 12px; font-weight: 900; color: #CE1126; letter-spacing: 0.5px; }
 
-.cni-nin-row {
+.cni-verso-nin-row {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 16px; background: rgba(252,209,22,0.15);
+  padding: 8px 16px;
+  background: rgba(252,209,22,0.2);
   border-bottom: 1px solid rgba(0,109,44,0.1);
 }
-.cni-nin-label { font-size: 9px; font-weight: 700; color: #666; }
-.cni-nin-val { font-size: 13px; font-weight: 900; color: #0a2e1a; font-family: 'Courier New', monospace; }
+.cni-verso-nin-label { font-size: 9px; font-weight: 700; color: #555; }
+.cni-verso-nin-val { font-size: 14px; font-weight: 900; color: #0a2e1a; font-family: 'Courier New', monospace; letter-spacing: 1px; }
 
-.cni-verso-sig { font-size: 7.5px; color: #555; text-align: center; padding: 4px 16px 0; font-style: italic; }
-.cni-sig-text-verso { font-size: 9px; font-weight: 700; color: #333; text-align: center; }
-.cni-sig-img { font-size: 18px; color: #006D44; text-align: center; padding: 4px 0; }
+.cni-verso-autorite { font-size: 8px; color: #666; font-style: italic; text-align: center; padding: 6px 0 2px; }
+.cni-verso-autorite-val { font-size: 10px; font-weight: 700; color: #333; text-align: center; }
+.cni-verso-sig-wave { font-size: 20px; color: #006D44; text-align: center; padding: 2px 0; }
 
-.cni-verso-grid {
+.cni-verso-geo-grid {
   display: grid; grid-template-columns: repeat(3, 1fr);
-  padding: 10px 16px; gap: 10px;
+  padding: 10px 16px 6px; gap: 12px;
 }
-.cni-verso-field { display: flex; flex-direction: column; gap: 2px; }
+.cni-verso-geo-item {}
+.cni-verso-geo-label { font-size: 7.5px; color: #555; font-style: italic; display: block; }
+.cni-verso-geo-val { font-size: 10px; font-weight: 700; color: #0a0a0a; display: block; }
 
-.cni-mrz {
-  background: #f5f5f5; border-top: 2px solid #ccc;
-  padding: 8px 14px; font-family: 'Courier New', monospace;
+.cni-mrz-zone {
+  background: #f0f0f0; border-top: 2px dashed #ccc; padding: 8px 14px 10px;
 }
-.mrz-line {
-  font-size: 9.5px; letter-spacing: 1.5px; color: #111;
+.cni-mrz-line {
+  font-family: 'Courier New', monospace; font-size: 10.5px;
+  letter-spacing: 2px; color: #111; line-height: 1.6;
   white-space: nowrap; overflow: hidden;
 }
 
-/* ════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════
    PASSEPORT BIOMÉTRIQUE
-════════════════════════════════════════════════════ */
-.doc-passport {
-  max-width: 680px; margin: 0 auto;
-  font-family: Arial, sans-serif;
-}
-.passport-cover-strip {
-  background: linear-gradient(90deg, #006D44, #004D30);
-  padding: 8px 16px;
+══════════════════════════════════════════════════ */
+.passport-wrap { max-width: 720px; margin: 0 auto; font-family: Arial, sans-serif; }
+
+.passport-cover-band {
+  background: linear-gradient(90deg, #004d20, #006D44);
+  padding: 8px 18px;
   display: flex; justify-content: space-between;
   font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.8);
-  letter-spacing: 0.5px; border-radius: 10px 10px 0 0;
+  letter-spacing: 1px; border-radius: 10px 10px 0 0;
 }
-.passport-body {
-  background: linear-gradient(135deg, #f8f4e8 0%, #fdf8ee 50%, #f0ead8 100%);
-  border: 2px solid #c8b87a; border-top: none;
-  border-radius: 0 0 10px 10px; overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-}
-.passport-header {
-  border-bottom: 2px solid #8B0000;
-  padding: 10px 16px;
-  background: linear-gradient(90deg, #8B0000 0%, #a00000 100%);
-}
-.passport-republic {
-  font-size: 14px; font-weight: 900; color: #fff;
-  letter-spacing: 1px; margin-bottom: 4px;
-}
-.passport-type-row {
-  display: flex; gap: 24px; align-items: flex-end;
-}
-.passport-mini-label { font-size: 7px; color: rgba(255,255,255,0.7); font-style: italic; }
-.passport-mini-val { font-size: 11px; font-weight: 700; color: #fff; }
-.passport-mini-val.bold { font-size: 13px; font-family: 'Courier New', monospace; }
 
-.passport-content {
-  display: flex; padding: 16px; gap: 20px;
+.passport-page {
+  background: linear-gradient(135deg, #fdf8ee 0%, #f8f2e0 40%, #ede5cc 100%);
+  border: 2px solid #c8b06a; border-top: none;
+  border-radius: 0 0 10px 10px; overflow: hidden;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+  position: relative;
 }
+.passport-watermark {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  font-size: 140px; opacity: 0.04; pointer-events: none; z-index: 0; color: #006D44;
+}
+
+.passport-header-bar {
+  background: linear-gradient(90deg, #8B0000 0%, #a80000 100%);
+  padding: 10px 18px;
+  border-bottom: 3px solid #6B0000;
+  position: relative; z-index: 1;
+}
+.passport-republic-txt { font-size: 15px; font-weight: 900; color: #fff; letter-spacing: 1px; margin-bottom: 5px; }
+.passport-doc-row { display: flex; gap: 20px; align-items: flex-end; }
+.passport-mini { display: flex; flex-direction: column; }
+.passport-mini-lbl { font-size: 7px; color: rgba(255,255,255,0.7); font-style: italic; }
+.passport-mini-val { font-size: 11px; color: #fff; font-weight: 600; }
+.passport-mini-val.bold { font-size: 14px; font-weight: 900; }
+.passport-mini-val.mono { font-family: 'Courier New', monospace; }
+
+.passport-bio-section {
+  display: flex; padding: 18px; gap: 20px;
+  position: relative; z-index: 1;
+}
+
 .passport-photo-col {
   display: flex; flex-direction: column; align-items: center; gap: 10px; flex-shrink: 0;
 }
-.passport-photo {
-  width: 100px; height: 120px; object-fit: cover;
-  border: 2px solid #8B0000; background: #ddd;
+.passport-photo-frame {
+  width: 106px; height: 128px;
+  border: 2px solid #8B0000; overflow: hidden;
+  background: #ddd;
 }
-.passport-thumb { display: flex; flex-direction: column; align-items: center; }
-.passport-thumb-box {
-  width: 48px; height: 56px; border: 1px solid #999;
-  border-radius: 2px; display: flex; align-items: center;
-  justify-content: center; font-size: 20px; background: rgba(255,255,255,0.6);
+.passport-photo-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.passport-thumb-small { display: flex; flex-direction: column; align-items: center; }
+
+.passport-bio-data { flex: 1; }
+.passport-bio-row {
+  display: flex; margin-bottom: 9px; gap: 16px;
 }
-.passport-thumb-label { font-size: 7px; color: #666; margin-top: 2px; }
+.passport-bio-row.two > .passport-bio-field { flex: 1; }
+.passport-bio-field { flex: 1; }
+.passport-bio-lbl { font-size: 7.5px; color: #666; font-style: italic; display: block; line-height: 1.3; }
+.passport-bio-val { font-size: 11.5px; color: #111; display: block; line-height: 1.4; }
+.passport-bio-val.bold { font-size: 14px; font-weight: 900; }
+.passport-bio-val.mono { font-family: 'Courier New', monospace; font-size: 11px; }
 
-.passport-data-col { flex: 1; }
-.passport-field-row { display: flex; gap: 24px; margin-bottom: 8px; }
-.passport-field { flex: 1; }
-.passport-label { font-size: 7.5px; color: #555; font-style: italic; display: block; }
-.passport-val { font-size: 11px; color: #111; display: block; line-height: 1.4; }
-.passport-val.bold { font-weight: 800; font-size: 13px; }
-
-.passport-mrz {
-  background: #f0e8d0; border-top: 2px solid #8B0000;
-  padding: 8px 14px;
+.passport-mrz-zone {
+  background: linear-gradient(90deg, #e8dfc8, #f0e8d0, #e8dfc8);
+  border-top: 2px solid #a08040; padding: 8px 16px 10px;
+  position: relative; z-index: 1;
 }
-.passport-mrz .mrz-line { font-size: 10px; letter-spacing: 2px; color: #111; font-family: 'Courier New', monospace; }
+.passport-mrz-line {
+  font-family: 'Courier New', monospace; font-size: 11.5px;
+  letter-spacing: 2.5px; color: #1a1a1a; line-height: 1.7;
+  white-space: nowrap; overflow: hidden;
+}
 
-/* ════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════
    ACTE DE NAISSANCE
-════════════════════════════════════════════════════ */
-.doc-acte-naissance {
-  max-width: 680px; margin: 0 auto;
-  font-family: Times New Roman, serif;
-}
-.acte-border-outer {
-  border: 4px solid #7B2D8B;
-  border-radius: 4px;
+══════════════════════════════════════════════════ */
+.acte-outer {
+  max-width: 720px; margin: 0 auto;
+  border: 5px solid #6B2D8B; border-radius: 4px;
   background: linear-gradient(135deg, #f8f0ff 0%, #fdf8ff 50%, #f0e8ff 100%);
-  box-shadow: 0 4px 20px rgba(123,45,139,0.15);
+  box-shadow: 0 6px 24px rgba(107,45,139,0.18);
+  font-family: 'Times New Roman', Times, serif;
 }
-.acte-border-inner {
-  border: 2px solid #9B4DB0;
-  margin: 6px;
-  border-radius: 2px;
-  padding: 16px 20px;
+.acte-inner {
+  border: 2.5px solid #9B4DB0; margin: 7px;
+  border-radius: 2px; padding: 18px 22px;
 }
 
-.acte-header {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  margin-bottom: 8px;
+.acte-top-codes {
+  display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;
 }
-.acte-barcode {
-  font-family: 'Courier New', monospace; font-size: 13px; letter-spacing: 2px;
-  color: #333; writing-mode: vertical-rl; transform: rotate(180deg);
+.acte-barcode-vert {
+  font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: 2px; color: #333;
+  writing-mode: vertical-rl; transform: rotate(180deg);
 }
-.acte-header-refs { text-align: right; }
-.acte-ref-line { font-size: 8.5px; color: #444; margin-bottom: 2px; }
+.acte-refs-right { text-align: right; font-size: 8.5px; color: #444; line-height: 1.8; }
 
-.acte-title-block { text-align: center; margin: 10px 0; }
-.acte-seal { font-size: 36px; display: block; }
-.acte-main-title {
-  font-size: 22px; font-weight: 900; color: #2c0a3a;
-  margin: 4px 0 2px; font-style: italic; letter-spacing: 1px;
-}
-.acte-sub-title {
-  font-size: 12px; font-style: italic; color: #555;
-  font-weight: 400; margin: 0 0 2px;
-}
-.acte-sub-fr { font-size: 14px; font-weight: 700; color: #2c0a3a; margin: 0; }
+.acte-title-area { text-align: center; margin: 8px 0 12px; }
+.acte-eagle { font-size: 40px; display: block; }
+.acte-h1 { font-size: 26px; font-weight: 900; font-style: italic; color: #2c0a3a; margin: 4px 0 2px; letter-spacing: 1px; }
+.acte-h1-en { font-size: 13px; font-style: italic; color: #666; margin: 0 0 2px; }
+.acte-h1-sub { font-size: 16px; font-weight: 700; color: #2c0a3a; margin: 0; }
 
-.acte-location-grid {
+.acte-loc-header {
   display: grid; grid-template-columns: 1fr 1fr;
-  border: 1px solid #9B4DB0; margin: 8px 0 0;
+  border: 1px solid #9B4DB0; margin: 0 0 0;
 }
 .acte-loc-cell {
-  padding: 5px 8px; display: flex; flex-direction: column;
+  padding: 5px 10px; display: flex; flex-direction: column;
 }
-.acte-loc-cell.border-right { border-right: 1px solid #9B4DB0; }
-.acte-loc-label { font-size: 8px; color: #555; }
-.acte-loc-val { font-size: 10px; font-weight: 700; color: #111; }
+.acte-loc-cell.border-r { border-right: 1px solid #9B4DB0; }
+.acte-loc-lbl { font-size: 8px; color: #666; }
+.acte-loc-val { font-size: 10.5px; font-weight: 700; color: #111; }
 
-.acte-section-title {
+.acte-section-head {
   background: #7B2D8B; color: #fff;
-  font-size: 9px; font-weight: 700; letter-spacing: 1px;
-  text-align: center; padding: 3px 8px; margin: 6px 0 0;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.5px;
+  text-align: center; padding: 4px 8px; margin-top: 6px;
 }
-.acte-data-grid { border: 1px solid #9B4DB0; border-top: none; }
-.acte-data-row {
-  border-bottom: 1px solid #d0b0e0; display: flex;
-}
-.acte-data-row:last-child { border-bottom: none; }
-.acte-data-row.split .acte-data-cell:first-child { border-right: 1px solid #d0b0e0; }
-.acte-data-cell {
-  flex: 1; padding: 4px 8px; display: flex; flex-direction: column;
-}
-.acte-data-cell.border-right { border-right: 1px solid #d0b0e0; }
-.acte-data-label { font-size: 8px; color: #555; font-style: italic; }
-.acte-data-val { font-size: 10px; font-weight: 700; color: #111; }
 
-.acte-approved-block {
-  padding: 8px 0; text-align: center;
+.acte-fields-grid { border: 1px solid #9B4DB0; border-top: none; }
+.acte-grid-row {
+  display: flex; border-bottom: 1px solid #d8b8e8; min-height: 28px;
 }
-.acte-justice-seal { font-size: 16px; color: #7B2D8B; font-weight: 700; }
+.acte-grid-row:last-child { border-bottom: none; }
+.acte-grid-row.full { flex-direction: row; }
+.acte-grid-row.half {}
+.acte-grid-row.half:not(:last-child):first-of-type + .acte-grid-row.half { border-left: 1px solid #d8b8e8; }
+.acte-grid-lbl {
+  font-size: 8px; color: #555; padding: 5px 8px 0; font-style: italic; white-space: nowrap;
+  display: block; min-width: 160px;
+}
+.acte-grid-val {
+  font-size: 11px; font-weight: 700; color: #111; padding: 5px 8px;
+  display: block; flex: 1;
+}
 
-.acte-footer {
-  display: flex; justify-content: space-between; align-items: flex-end;
-  margin-top: 12px; gap: 20px;
+.acte-approved-area { padding: 8px 0; text-align: center; }
+.acte-justice-img { font-size: 18px; color: #7B2D8B; font-weight: 900; }
+
+.acte-footer-row {
+  display: flex; justify-content: space-between; align-items: flex-end; margin-top: 14px; gap: 16px;
 }
-.acte-footer-left { display: flex; flex-direction: column; gap: 4px; }
-.acte-dresse { font-size: 9px; color: #333; margin: 0; }
-.acte-officier-label { font-size: 8.5px; color: #444; font-style: italic; margin: 0; }
-.stamp-circle {
-  width: 64px; height: 64px; border: 3px solid #006D44;
+.acte-footer-left-col { display: flex; flex-direction: column; gap: 6px; }
+.acte-footer-date { font-size: 9.5px; color: #333; }
+.acte-footer-officier { font-size: 9px; color: #555; font-style: italic; }
+.acte-stamp-circle {
+  width: 68px; height: 68px; border: 3px solid #006D44;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
   background: rgba(255,255,255,0.5);
 }
-.stamp-inner { text-align: center; }
-.acte-footer-right { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.acte-qr { width: 80px; height: 80px; border: 1px solid #ccc; border-radius: 4px; }
-.acte-seal-rouge { font-size: 36px; }
+.acte-stamp-inner { font-size: 8px; text-align: center; color: #006D44; font-weight: 700; line-height: 1.4; }
+.acte-footer-right-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.acte-qr-img { width: 86px; height: 86px; border: 1px solid #ccc; border-radius: 4px; display: block; }
+.acte-red-seal { font-size: 42px; }
 
-/* ════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════
    PERMIS DE CONDUIRE
-════════════════════════════════════════════════════ */
-.doc-permis { max-width: 640px; margin: 0 auto; font-family: Arial, sans-serif; display: flex; flex-direction: column; gap: 20px; }
+══════════════════════════════════════════════════ */
+.permis-wrap { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; font-family: Arial, sans-serif; }
 
-.permis-recto {
-  background: linear-gradient(135deg, #f0f8e8 0%, #e8f5d8 50%, #deeec8 100%);
-  border: 2px solid #6a8a3a; border-radius: 10px; overflow: hidden;
-  box-shadow: 0 4px 16px rgba(100,138,58,0.15);
+.permis-recto-card {
+  background: linear-gradient(150deg, #f0f8e0 0%, #e4f2d0 40%, #daebc8 100%);
+  border: 2px solid #6a9a3a; border-radius: 10px; overflow: hidden;
+  box-shadow: 0 4px 16px rgba(106,154,58,0.15);
 }
-.permis-recto-header {
-  background: linear-gradient(90deg, #2d4a1a 0%, #3d6a2a 100%);
-  padding: 8px 14px; display: flex; align-items: center; gap: 12px;
+.permis-header-bar {
+  background: linear-gradient(90deg, #1e3a0e 0%, #2e5a1e 100%);
+  padding: 9px 14px; display: flex; align-items: center; gap: 12px;
 }
-.permis-flag-strip { display: flex; flex-direction: row; height: 18px; width: 28px; border-radius: 2px; overflow: hidden; }
-.permis-flag-strip .flag-r, .permis-flag-strip .flag-g, .permis-flag-strip .flag-b { flex: 1; }
-.permis-title-group { flex: 1; text-align: center; }
-.permis-republic { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.9); letter-spacing: 0.5px; }
-.permis-type { font-size: 14px; font-weight: 900; color: #FCD116; letter-spacing: 1px; }
-.permis-ecowas { font-size: 24px; }
+.permis-flag-v { display: flex; flex-direction: column; height: 22px; width: 14px; border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+.permis-header-text { flex: 1; text-align: center; }
+.permis-republic { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.9); letter-spacing: 0.5px; }
+.permis-type-txt { font-size: 15px; font-weight: 900; color: #FCD116; letter-spacing: 1px; }
+.permis-header-ecowas { font-size: 26px; }
 
-.permis-body-recto { display: flex; padding: 14px; gap: 14px; }
+.permis-body { display: flex; padding: 14px; gap: 14px; }
 .permis-photo-col { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0; }
-.permis-photo { width: 80px; height: 96px; object-fit: cover; border: 2px solid #3d6a2a; background: #ddd; }
+.permis-photo-frame { width: 84px; height: 102px; border: 2px solid #2e5a1e; overflow: hidden; background: #ddd; }
+.permis-photo-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .permis-sig-label { font-size: 7px; color: #555; }
-.permis-sig-line { width: 80px; height: 1px; background: #333; }
+.permis-sig-line { width: 84px; height: 1px; background: #333; }
 .permis-data-col { flex: 1; }
-.permis-right-col { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
-.permis-field { display: flex; gap: 6px; margin-bottom: 4px; align-items: baseline; }
-.permis-label { font-size: 8px; color: #444; font-weight: 700; white-space: nowrap; }
-.permis-val { font-size: 10px; color: #111; }
-.permis-val.bold { font-weight: 800; }
-.permis-val.red { color: #CE1126; font-size: 12px; font-family: 'Courier New', monospace; }
-.permis-qr { width: 66px; height: 66px; border: 1px solid #ccc; border-radius: 3px; }
+.permis-qr-col { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+.permis-qr-img { width: 70px; height: 70px; border: 1px solid #bbb; border-radius: 3px; display: block; }
 
-/* Verso permis */
-.permis-verso {
-  background: #f8f8f8; border: 2px solid #6a8a3a;
+.permis-field { display: flex; align-items: baseline; gap: 6px; margin-bottom: 5px; }
+.permis-lbl { font-size: 8.5px; color: #444; font-weight: 700; white-space: nowrap; }
+.permis-val { font-size: 10.5px; color: #111; }
+.permis-val.bold { font-weight: 800; }
+
+.permis-verso-card {
+  background: #f6f6f6; border: 2px solid #6a9a3a;
   border-radius: 10px; padding: 14px; overflow: hidden;
 }
-.permis-verso-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.permis-verso-top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .permis-verso-num { font-family: 'Courier New', monospace; font-size: 12px; font-weight: 700; color: #333; }
-.permis-verso-stamp { display: flex; align-items: center; }
-.permis-stamp-circle {
-  width: 60px; height: 60px; border: 2px solid #006D44;
+.permis-verso-sig-stamp {}
+.permis-verso-stamp-circle {
+  width: 64px; height: 64px; border: 2px solid #006D44;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
 }
-.permis-categories { display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; }
-.permis-cat-header { display: flex; gap: 8px; font-size: 9px; font-weight: 700; color: #555; padding: 0 4px 4px; border-bottom: 1px solid #ccc; }
-.permis-cat-row { display: flex; align-items: center; gap: 8px; padding: 2px 4px; border-bottom: 1px dotted #ddd; }
-.permis-cat-code { font-size: 11px; font-weight: 700; width: 16px; color: #333; }
-.permis-cat-img { font-size: 14px; width: 20px; }
-.permis-cat-date { flex: 1; font-size: 9px; color: #555; }
-.permis-cat-check { font-size: 12px; color: #333; }
-.permis-verso-expiry { font-size: 9px; color: #333; border-top: 1px solid #ccc; padding-top: 6px; }
-.permis-verso-expiry .bold { font-weight: 700; }
-.permis-verso-qr { text-align: right; margin-top: 4px; }
-.permis-qr-verso { width: 72px; height: 72px; border: 1px solid #ccc; border-radius: 3px; }
 
-/* ── Responsive ── */
-@media (max-width: 768px) {
-  .document-wrapper { padding: 16px; }
-  .doc-header-section { flex-direction: column; }
-  .cni-body { flex-wrap: wrap; }
-  .passport-content { flex-direction: column; }
-  .cni-verso-grid { grid-template-columns: 1fr 1fr; }
-  .doc-permis { padding: 0; }
-  .permis-body-recto { flex-wrap: wrap; }
-  .acte-location-grid { grid-template-columns: 1fr; }
+.permis-cat-section { margin-bottom: 10px; }
+.permis-cat-hdr { display: flex; gap: 8px; font-size: 9px; font-weight: 700; color: #555; padding: 0 4px 5px; border-bottom: 1px solid #ccc; }
+.permis-cat-row { display: flex; align-items: center; gap: 8px; padding: 3px 4px; border-bottom: 1px dotted #ddd; }
+.permis-cat-letter { font-size: 12px; font-weight: 700; width: 16px; color: #333; }
+.permis-cat-icon { font-size: 14px; width: 22px; }
+.permis-cat-date { font-size: 9px; color: #555; flex: 1; }
+.permis-cat-check { font-size: 13px; color: #333; }
+.permis-verso-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #ccc; padding-top: 8px; font-size: 9.5px; color: #333; }
+.permis-qr-verso-img { width: 76px; height: 76px; border: 1px solid #ccc; border-radius: 3px; display: block; }
+
+/* ── IMPRESSION ── */
+@media print {
+  .layout-wrapper, .sidebar-root, .header-root, .doc-top-bar,
+  .doc-wallet-panel, .doc-hash-bar, .breadcrumbs,
+  .doc-modal-overlay, button { display: none !important; }
+  .doc-print-zone {
+    box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important;
+  }
+  .main-content, body, html { background: white !important; margin: 0 !important; padding: 0 !important; }
+  .cni-card, .passport-wrap, .acte-outer, .permis-wrap { max-width: 100% !important; }
 }
 
-@media print {
-  .layout-wrapper, .sidebar, .header-root, .doc-header-section,
-  .wallet-panel, .hash-display, .breadcrumbs { display: none !important; }
-  .document-wrapper { box-shadow: none; border: none; padding: 0; }
-  .main-content { margin: 0; padding: 0; }
-  body { background: white; }
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .doc-print-zone { padding: 14px; }
+  .cni-body-row { flex-wrap: wrap; }
+  .cni-photo-section { width: 80px; }
+  .cni-photo-frame { width: 72px; height: 88px; }
+  .cni-thumb-col { width: 52px; }
+  .cni-verso-geo-grid { grid-template-columns: 1fr 1fr; }
+  .passport-bio-section { flex-direction: column; }
+  .passport-bio-row.two { flex-direction: column; gap: 8px; }
+  .acte-loc-header { grid-template-columns: 1fr; }
+  .acte-loc-cell.border-r { border-right: none; border-bottom: 1px solid #9B4DB0; }
+  .permis-body { flex-wrap: wrap; }
 }
