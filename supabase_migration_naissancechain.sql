@@ -227,3 +227,31 @@ FOR SELECT
 USING (true);
 
 COMMIT;
+
+-- ---------------------------------------------------------------------------
+-- PATCH v2 : colonnes supplémentaires + policy DELETE manquante
+-- A exécuter après la migration initiale
+-- ---------------------------------------------------------------------------
+
+-- Ajout colonnes optionnelles pour enrichissement document
+ALTER TABLE public.documents_certifies
+  ADD COLUMN IF NOT EXISTS type_document TEXT,
+  ADD COLUMN IF NOT EXISTS nom VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS prenom VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS date_naissance VARCHAR(30),
+  ADD COLUMN IF NOT EXISTS lieu_naissance VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS genre VARCHAR(10);
+
+-- Policy DELETE manquante (nécessaire pour la suppression côté citoyen)
+DROP POLICY IF EXISTS documents_delete_all ON public.documents_certifies;
+CREATE POLICY documents_delete_all
+ON public.documents_certifies
+FOR DELETE
+USING (true);
+
+-- Policy DELETE citoyens
+DROP POLICY IF EXISTS citoyens_delete_all ON public.citoyens;
+CREATE POLICY citoyens_delete_all
+ON public.citoyens
+FOR DELETE
+USING (true);

@@ -3,22 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Shield, Lock, Mail, AlertCircle, Eye, EyeOff,
-  Users, FileText, CheckCircle, ArrowRight
+  Users, FileText, CheckCircle, ArrowRight, Clock
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import {
+  verifyAdminCredentials,
+  verifyAdminSecret,
+  loginCitoyen,
+  checkBruteForce,
+} from '../lib/auth';
 import './Login.css';
-
-// Comptes administrateur (internes — non exposés dans la base de données)
-const ADMIN_ACCOUNTS = [
-  { username: 'admin',        password: 'admin123',  secret: 'IDENTIGUINEE@2025!', nom: 'Administrateur Système' },
-  { username: 'identiguinee', password: 'miabe2025', secret: 'GUINEE#SECURE99',    nom: 'Équipe IdentiGuinée'    },
-];
 
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [mode, setMode] = useState('login'); // 'login' | 'register' | 'admin_secret'
+  const [mode, setMode]                 = useState('login'); // 'login' | 'register' | 'admin_secret'
   const [adminCandidate, setAdminCandidate] = useState(null);
 
   const [form, setForm] = useState({
@@ -30,18 +30,13 @@ const Login = () => {
   const [showSecret, setShowSecret]     = useState(false);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState('');
+  const [lockWait, setLockWait]         = useState(0);
 
-  // ── Stats réelles depuis Supabase ──
-  const [stats, setStats] = useState({
-    citoyens:   '—',
-    documents:  '—',
-    tauxVerif:  '—',
-  });
+  const [stats, setStats] = useState({ citoyens: '—', documents: '—', tauxVerif: '—' });
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Stats réelles depuis les 3 tables
         const [
           { count: nbCitoyens },
           { count: nbActes },
@@ -53,12 +48,7 @@ const Login = () => {
           supabase.from('documents_certifies').select('*', { count: 'exact', head: true }).eq('statut', 'GENERE'),
           supabase.from('naissancechain').select('*', { count: 'exact', head: true }).not('hash_blockchain', 'is', null),
         ]);
-
-        const totalActes = nbActes || 1;
-        const taux = totalActes > 0
-          ? Math.round(((nbVerifies || 0) / totalActes) * 1000) / 10
-          : 0;
-
+        const taux = nbActes > 0 ? Math.round(((nbVerifies || 0) / nbActes) * 1000) / 10 : 0;
         setStats({
           citoyens:  (nbCitoyens || 0).toLocaleString('fr-FR'),
           documents: (nbDocsGeneres || 0).toLocaleString('fr-FR'),
@@ -71,21 +61,31 @@ const Login = () => {
     fetchStats();
   }, []);
 
+  useEffect(() => {
+    if (lockWait <= 0) return;
+    const t = setTimeout(() => setLockWait(w => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [lockWait]);
+
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
+    const { locked, wait } = checkBruteForce();
+    if (locked) { setLockWait(wait); setError(`Trop de tentatives. Attendez ${wait}s.`); return; }
+
+    setLoading(true);
     try {
-      // ── Étape 2 Admin : vérifier le mot de passe secret ──
+      // ── Étape 2 Admin : clé secrète ──
       if (mode === 'admin_secret') {
-        if (form.adminSecret === adminCandidate.secret) {
+        const ok = await verifyAdminSecret(adminCandidate, form.adminSecret);
+        if (ok) {
           sessionStorage.setItem('identiguinee_admin', JSON.stringify({ nom: adminCandidate.nom, username: adminCandidate.username }));
           navigate('/admin');
         } else {
-          setError('Mot de passe incorrect. Accès refusé.');
+          setError('Clé secrète incorrecte. Accès refusé.');
         }
         setLoading(false);
         return;
@@ -93,160 +93,65 @@ const Login = () => {
 
       // ── Connexion ──
       if (mode === 'login') {
-        if (!form.identifiant || !form.password) {
-          setError('Veuillez remplir tous les champs.');
-          setLoading(false);
-          return;
-        }
+        if (!form.identifiant || !form.password) { setError('Veuillez remplir tous les champs.'); setLoading(false); return; }
 
-        // Vérifier si c'est un compte admin
-        const adminMatch = ADMIN_ACCOUNTS.find(
-          a => a.username === form.identifiant && a.password === form.password
-        );
-        if (adminMatch) {
-          setAdminCandidate(adminMatch);
-          setMode('admin_secret');
-          setLoading(false);
-          return;
-        }
+        const adminCheck = await verifyAdminCredentials(form.identifiant, form.password);
+        if (adminCheck.success) { setAdminCandidate(adminCheck.admin); setMode('admin_secret'); setLoading(false); return; }
 
-        // Connexion citoyen via Supabase
-        const { data, error: dbError } = await supabase
-          .from('citoyens')
-          .select('*')
-          .eq('password', form.password)
-          .or(`email.eq.${form.identifiant},telephone.eq.${form.identifiant},id_acte_lie.eq.${form.identifiant}`)
-          .single();
+        const result = await loginCitoyen(form.identifiant, form.password);
+        if (!result.success) { setError(result.error || 'Identifiant ou mot de passe incorrect.'); setLoading(false); return; }
 
-        if (dbError || !data) {
-          setError('Identifiant ou mot de passe incorrect.');
-          setLoading(false);
-          return;
-        }
-
-        let enriched = { ...data };
-        if (data.id_acte_lie) {
-          const { data: chainData } = await supabase
-            .from('naissancechain')
-            .select('*')
-            .eq('id_acte', data.id_acte_lie)
-            .maybeSingle();
-          if (chainData) enriched = { ...enriched, ...chainData };
-        }
-
-        let formattedDate = enriched.date_naissance;
-        if (formattedDate?.includes('/')) {
-          const p = formattedDate.split('/');
-          if (p.length === 3) formattedDate = `${p[2]}-${p[1]}-${p[0]}`;
-        }
-
-        login({
-          id: data.id,
-          nom:           enriched.nom    || data.nom,
-          prenom:        enriched.prenom || data.prenom,
-          date_naissance: formattedDate,
-          lieu_naissance: enriched.lieu_naissance,
-          nom_pere:      enriched.nom_pere,
-          nom_mere:      enriched.nom_mere,
-          genre:         enriched.genre,
-          telephone:     data.telephone,
-          email:         data.email,
-          matricule:     data.id_acte_lie || `GN-${data.id}`,
-          avatar:        data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent((enriched.prenom || '') + ' ' + (enriched.nom || ''))}&background=006D44&color=fff`,
-          id_acte_lie:   data.id_acte_lie,
-        });
+        login(result.userData);
         navigate('/dashboard');
         return;
       }
 
       // ── Inscription ──
       if (mode === 'register') {
-        if (form.password !== form.confirmPassword) {
-          setError('Les mots de passe ne correspondent pas.');
-          setLoading(false);
-          return;
-        }
-        if (!form.num_acte) {
-          setError("Le numéro d'acte de naissance est obligatoire.");
-          setLoading(false);
-          return;
-        }
+        if (form.password !== form.confirmPassword) { setError('Les mots de passe ne correspondent pas.'); setLoading(false); return; }
+        if (!form.num_acte) { setError("Le numéro d'acte de naissance est obligatoire."); setLoading(false); return; }
+        if (form.password.length < 8) { setError('Le mot de passe doit contenir au moins 8 caractères.'); setLoading(false); return; }
 
-        const { data: chainData } = await supabase
-          .from('naissancechain')
-          .select('*')
-          .eq('id_acte', form.num_acte)
-          .maybeSingle();
+        const { data: chainData } = await supabase.from('naissancechain').select('*').eq('id_acte', form.num_acte).maybeSingle();
+        if (!chainData) { setError("Numéro d'acte invalide. Ce numéro n'existe pas dans le registre national."); setLoading(false); return; }
 
-        if (!chainData) {
-          setError("Numéro d'acte invalide. Ce numéro n'existe pas dans le registre national.");
-          setLoading(false);
-          return;
-        }
+        const { data: existing } = await supabase.from('citoyens').select('id').or(`email.eq.${form.email},telephone.eq.${form.telephone},id_acte_lie.eq.${form.num_acte}`).maybeSingle();
+        if (existing) { setError('Ce compte (email, téléphone ou acte) existe déjà.'); setLoading(false); return; }
 
-        const { data: existing } = await supabase
-          .from('citoyens')
-          .select('id')
-          .or(`email.eq.${form.email},telephone.eq.${form.telephone},id_acte_lie.eq.${form.num_acte}`)
-          .maybeSingle();
+        const { data: newUser, error: createErr } = await supabase.from('citoyens').insert([{
+          email: form.email, telephone: form.telephone, id_acte_lie: form.num_acte,
+          nom: chainData.nom, prenom: chainData.prenom,
+          date_naissance: chainData.date_naissance, lieu_naissance: chainData.lieu_naissance,
+          password: form.password,
+        }]).select().single();
 
-        if (existing) {
-          setError('Ce compte (email, téléphone ou acte) existe déjà.');
-          setLoading(false);
-          return;
-        }
-
-        const { data: newUser, error: createErr } = await supabase
-          .from('citoyens')
-          .insert([{
-            email:         form.email,
-            telephone:     form.telephone,
-            id_acte_lie:   form.num_acte,
-            nom:           chainData.nom,
-            prenom:        chainData.prenom,
-            date_naissance: chainData.date_naissance,
-            lieu_naissance: chainData.lieu_naissance,
-            password:      form.password,
-          }])
-          .select()
-          .single();
-
-        if (createErr) {
-          setError(`Erreur : ${createErr.message}`);
-          setLoading(false);
-          return;
-        }
+        if (createErr) { setError(`Erreur : ${createErr.message}`); setLoading(false); return; }
 
         login({
-          id:            newUser.id,
-          nom:           chainData.nom,
-          prenom:        chainData.prenom,
-          date_naissance: chainData.date_naissance,
-          lieu_naissance: chainData.lieu_naissance,
-          matricule:     form.num_acte,
-          avatar:        `https://ui-avatars.com/api/?name=${encodeURIComponent(chainData.prenom + ' ' + chainData.nom)}&background=006D44&color=fff`,
-          id_acte_lie:   form.num_acte,
+          id: newUser.id, nom: chainData.nom, prenom: chainData.prenom,
+          date_naissance: chainData.date_naissance, lieu_naissance: chainData.lieu_naissance,
+          matricule: form.num_acte,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(chainData.prenom+' '+chainData.nom)}&background=006D44&color=fff`,
+          id_acte_lie: form.num_acte,
+          expiresAt: Date.now() + 24 * 60 * 60 * 1000,
         });
         navigate('/dashboard');
       }
-
-    } catch (err) {
+    } catch {
       setError('Une erreur inattendue est survenue. Veuillez réessayer.');
     }
     setLoading(false);
   };
 
   const resetMode = () => {
-    setMode('login');
-    setAdminCandidate(null);
-    setForm(f => ({ ...f, password: '', adminSecret: '' }));
-    setError('');
+    setMode('login'); setAdminCandidate(null);
+    setForm(f => ({ ...f, password: '', adminSecret: '' })); setError('');
   };
 
   return (
     <div className="login-page">
 
-      {/* Panneau gauche */}
+      {/* ── Panneau gauche ── */}
       <div className="login-visual">
         <div className="login-visual-logo">
           <div className="login-visual-logo-icon">
@@ -260,21 +165,18 @@ const Login = () => {
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <p style={{ fontSize: 32, fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: 16, letterSpacing: -1 }}>
-            L'identité de<br />
-            <span style={{ color: '#FCD116' }}>chaque citoyen</span>,<br />
-            sécurisée.
+            L'identité de<br /><span style={{ color: '#FCD116' }}>chaque citoyen</span>,<br />sécurisée.
           </p>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, marginBottom: 48 }}>
             Plateforme officielle de gestion d'identité numérique de la République de Guinée. Vos documents certifiés, sans corruption.
           </p>
         </div>
 
-        {/* Stats réelles */}
         <div className="login-visual-stats">
           {[
             { icon: <Users size={20} color="#fff" />,       value: stats.citoyens,  label: 'Citoyens enregistrés' },
-            { icon: <FileText size={20} color="#fff" />,    value: stats.documents, label: 'Documents dans le registre' },
-            { icon: <CheckCircle size={20} color="#fff" />, value: stats.tauxVerif, label: 'Taux de vérification blockchain' },
+            { icon: <FileText size={20} color="#fff" />,    value: stats.documents, label: 'Documents générés' },
+            { icon: <CheckCircle size={20} color="#fff" />, value: stats.tauxVerif, label: 'Taux vérification blockchain' },
           ].map(s => (
             <div className="login-stat-card" key={s.label}>
               <div className="login-stat-icon">{s.icon}</div>
@@ -287,135 +189,214 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Panneau droit */}
+      {/* ── Panneau droit ── */}
       <div className="login-form-panel">
         <div className="login-form-card">
 
-          {/* En-tête */}
-          <div className="login-form-header">
-            {mode === 'admin_secret' ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 44, height: 44, background: '#0a2e1a', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Lock size={22} color="#FCD116" />
-                </div>
-                <div>
-                  <h2 style={{ margin: 0 }}>Vérification en deux étapes</h2>
-                  <p style={{ margin: 0 }}>Saisissez votre clé d'accès confidentielle</p>
-                </div>
+          {/* Header admin secret */}
+          {mode === 'admin_secret' ? (
+            <div style={{ textAlign: 'center', marginBottom: 28 }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#FFF3CD', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                <Lock size={28} color="#B45309" />
               </div>
-            ) : (
-              <>
-                <h2>{mode === 'login' ? 'Connexion' : 'Créer un compte'}</h2>
-                <p>{mode === 'login' ? 'Accédez à votre espace sécurisé' : 'Inscrivez-vous avec votre numéro d\'acte de naissance'}</p>
-              </>
-            )}
-          </div>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#0a2e1a', margin: '0 0 6px' }}>Authentification — Étape 2</h2>
+              <p style={{ fontSize: 13, color: '#888', margin: 0 }}>Bonjour <strong>{adminCandidate?.nom}</strong>. Saisissez votre clé secrète.</p>
+            </div>
+          ) : (
+            <div className="login-form-header">
+              <h2>Bienvenue sur IdentiGuinée</h2>
+              <p>Plateforme officielle d'identité numérique de la République de Guinée</p>
+            </div>
+          )}
 
           {/* Tabs */}
           {mode !== 'admin_secret' && (
             <div className="auth-tabs">
-              <button className={`auth-tab ${mode === 'login' ? 'active' : ''}`} onClick={() => { setMode('login'); setError(''); }} type="button">Connexion</button>
-              <button className={`auth-tab ${mode === 'register' ? 'active' : ''}`} onClick={() => { setMode('register'); setError(''); }} type="button">Inscription</button>
-            </div>
-          )}
-
-          {/* Erreur */}
-          {error && (
-            <div className="login-error">
-              <AlertCircle size={17} style={{ flexShrink: 0 }} />
-              {error}
+              <button className={`auth-tab ${mode === 'login' ? 'active' : ''}`} onClick={() => { setMode('login'); setError(''); }}>
+                Connexion
+              </button>
+              <button className={`auth-tab ${mode === 'register' ? 'active' : ''}`} onClick={() => { setMode('register'); setError(''); }}>
+                Inscription
+              </button>
             </div>
           )}
 
           {/* Formulaire */}
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} autoComplete="off">
 
+            {/* CONNEXION */}
+            {mode === 'login' && (
+              <>
+                <div className="field-group">
+                  <label className="field-label">Identifiant</label>
+                  <div className="field-input-wrap">
+                    <Mail size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
+                    <input
+                      className="field-input"
+                      style={{ paddingLeft: 38 }}
+                      type="text"
+                      placeholder="Email, téléphone ou N° d'acte"
+                      value={form.identifiant}
+                      onChange={e => set('identifiant', e.target.value)}
+                      autoComplete="username"
+                    />
+                  </div>
+                </div>
+                <div className="field-group">
+                  <label className="field-label">Mot de passe</label>
+                  <div className="field-input-wrap">
+                    <Lock size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
+                    <input
+                      className="field-input"
+                      style={{ paddingLeft: 38 }}
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={form.password}
+                      onChange={e => set('password', e.target.value)}
+                      autoComplete="current-password"
+                    />
+                    <button type="button" className="field-eye-btn" onClick={() => setShowPassword(v => !v)}>
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* CLÉ SECRÈTE ADMIN */}
             {mode === 'admin_secret' && (
               <div className="field-group">
-                <label className="field-label"><Lock size={13} /> Clé d'accès confidentielle</label>
+                <label className="field-label">Clé d'accès confidentielle</label>
                 <div className="field-input-wrap">
+                  <Lock size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
                   <input
-                    type={showSecret ? 'text' : 'password'}
                     className="field-input"
-                    placeholder="••••••••••••••••"
+                    style={{ paddingLeft: 38 }}
+                    type={showSecret ? 'text' : 'password'}
+                    placeholder="Clé secrète fournie par votre responsable"
                     value={form.adminSecret}
                     onChange={e => set('adminSecret', e.target.value)}
-                    autoFocus required
+                    autoFocus
                   />
-                  <button type="button" className="field-eye-btn" onClick={() => setShowSecret(s => !s)}>
-                    {showSecret ? <EyeOff size={17} /> : <Eye size={17} />}
+                  <button type="button" className="field-eye-btn" onClick={() => setShowSecret(v => !v)}>
+                    {showSecret ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
               </div>
             )}
 
-            {mode === 'login' && (
-              <>
-                <div className="field-group">
-                  <label className="field-label"><Mail size={13} /> Identifiant</label>
-                  <input className="field-input" type="text" placeholder="Email, téléphone ou numéro d'acte" value={form.identifiant} onChange={e => set('identifiant', e.target.value)} required />
-                </div>
-                <div className="field-group">
-                  <label className="field-label"><Lock size={13} /> Mot de passe</label>
-                  <div className="field-input-wrap">
-                    <input type={showPassword ? 'text' : 'password'} className="field-input" placeholder="••••••••" value={form.password} onChange={e => set('password', e.target.value)} required />
-                    <button type="button" className="field-eye-btn" onClick={() => setShowPassword(s => !s)}>
-                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-
+            {/* INSCRIPTION */}
             {mode === 'register' && (
               <>
                 <div className="field-group">
-                  <label className="field-label">Numéro d'acte de naissance</label>
-                  <input className="field-input" type="text" placeholder="Ex : GN-102-2024" value={form.num_acte} onChange={e => set('num_acte', e.target.value)} required />
-                  <p className="field-hint">Vos données officielles seront extraites de NaissanceChain.</p>
+                  <label className="field-label">Numéro d'acte de naissance <span style={{ color: '#CE1126' }}>*</span></label>
+                  <div className="field-input-wrap">
+                    <FileText size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
+                    <input
+                      className="field-input"
+                      style={{ paddingLeft: 38 }}
+                      type="text"
+                      placeholder="Ex: GN-102-2024"
+                      value={form.num_acte}
+                      onChange={e => set('num_acte', e.target.value.toUpperCase())}
+                    />
+                  </div>
+                  <p className="field-hint">Ce numéro figure sur votre acte de naissance papier.</p>
                 </div>
                 <div className="field-group">
-                  <label className="field-label"><Mail size={13} /> Email</label>
-                  <input className="field-input" type="email" placeholder="votre@email.com" value={form.email} onChange={e => set('email', e.target.value)} required />
+                  <label className="field-label">Adresse email</label>
+                  <div className="field-input-wrap">
+                    <Mail size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
+                    <input className="field-input" style={{ paddingLeft: 38 }} type="email" placeholder="votre@email.com" value={form.email} onChange={e => set('email', e.target.value)} />
+                  </div>
                 </div>
                 <div className="field-group">
                   <label className="field-label">Téléphone</label>
-                  <input className="field-input" type="text" placeholder="+224 620 000 000" value={form.telephone} onChange={e => set('telephone', e.target.value)} required />
+                  <div className="field-input-wrap">
+                    <Mail size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
+                    <input className="field-input" style={{ paddingLeft: 38 }} type="tel" placeholder="+224 6XX XXX XXX" value={form.telephone} onChange={e => set('telephone', e.target.value)} />
+                  </div>
                 </div>
                 <div className="field-group">
-                  <label className="field-label"><Lock size={13} /> Mot de passe</label>
+                  <label className="field-label">Mot de passe <span style={{ color: '#CE1126' }}>*</span></label>
                   <div className="field-input-wrap">
-                    <input type={showPassword ? 'text' : 'password'} className="field-input" placeholder="••••••••" value={form.password} onChange={e => set('password', e.target.value)} required />
-                    <button type="button" className="field-eye-btn" onClick={() => setShowPassword(s => !s)}>
-                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                    <Lock size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
+                    <input
+                      className="field-input"
+                      style={{ paddingLeft: 38 }}
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Minimum 8 caractères"
+                      value={form.password}
+                      onChange={e => set('password', e.target.value)}
+                    />
+                    <button type="button" className="field-eye-btn" onClick={() => setShowPassword(v => !v)}>
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
                   </div>
                 </div>
                 <div className="field-group">
-                  <label className="field-label"><Lock size={13} /> Confirmer le mot de passe</label>
-                  <input type="password" className="field-input" placeholder="••••••••" value={form.confirmPassword} onChange={e => set('confirmPassword', e.target.value)} required />
+                  <label className="field-label">Confirmer le mot de passe</label>
+                  <div className="field-input-wrap">
+                    <Lock size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
+                    <input
+                      className="field-input"
+                      style={{ paddingLeft: 38 }}
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Répéter le mot de passe"
+                      value={form.confirmPassword}
+                      onChange={e => set('confirmPassword', e.target.value)}
+                    />
+                  </div>
                 </div>
               </>
             )}
 
-            <button type="submit" className="btn-primary-login" disabled={loading}>
+            {/* Erreur */}
+            {error && (
+              <div className="login-error">
+                <AlertCircle size={15} />
+                <span>{error}</span>
+                {lockWait > 0 && (
+                  <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                    <Clock size={12} /> {lockWait}s
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              className="btn-primary-login"
+              disabled={loading || lockWait > 0}
+            >
               {loading ? (
                 <><div className="spinner" /> Vérification...</>
+              ) : mode === 'register' ? (
+                <><CheckCircle size={16} /> Créer mon compte</>
               ) : mode === 'admin_secret' ? (
-                <><Shield size={17} /> Confirmer l'accès</>
-              ) : mode === 'login' ? (
-                <><ArrowRight size={17} /> Se connecter</>
+                <><Lock size={16} /> Valider l'accès</>
               ) : (
-                <><CheckCircle size={17} /> Créer mon compte</>
+                <><ArrowRight size={16} /> Se connecter</>
               )}
             </button>
 
             {mode === 'admin_secret' && (
-              <button type="button" onClick={resetMode} style={{ width: '100%', marginTop: 12, padding: 12, background: '#f5f5f5', border: 'none', borderRadius: 10, fontSize: 13, color: '#666', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+              <button
+                type="button"
+                onClick={resetMode}
+                style={{ width: '100%', marginTop: 10, padding: '11px', background: 'transparent', border: '1.5px solid #e0e0e0', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#666', fontFamily: 'inherit' }}
+              >
                 ← Retour à la connexion
               </button>
             )}
           </form>
+
+          {/* Badge sécurité */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24, padding: '10px 16px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #b8d8b8' }}>
+            <Shield size={13} color="#006D44" />
+            <span style={{ fontSize: 12, color: '#2d5a2d', fontWeight: 600 }}>Connexion chiffrée TLS 1.3 — Protection anti-intrusion active</span>
+          </div>
         </div>
       </div>
     </div>

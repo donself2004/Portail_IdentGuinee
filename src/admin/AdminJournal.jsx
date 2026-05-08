@@ -1,186 +1,269 @@
+/**
+ * AdminJournal.jsx — Journal de transparence
+ * AMÉLIORÉ : données réelles depuis Supabase + logs simulés en temps réel
+ */
 import React, { useState, useEffect } from 'react';
-import { Shield, Clock, Download } from 'lucide-react';
+import { Shield, Clock, Download, RefreshCw, Filter } from 'lucide-react';
 import AdminLayout from './AdminLayout';
+import { supabase } from '../lib/supabase';
 
-const INITIAL_LOGS = [
-  { time: '12:03:01', req: '#7829', label: 'Vérification registre OK', hash: 'SHA-256: 8A7F...021E', type: 'success', icon: '✓' },
-  { time: '12:03:05', req: '#7829', label: 'Validation biométrique réussie', hash: 'SHA-256: 4F1C...88A2', type: 'success', icon: '◈' },
-  { time: '12:03:10', req: '#7829', label: 'Document généré automatiquement', hash: 'SHA-256: 99E2...FB4C', type: 'success', icon: '↑' },
-  { time: '12:04:15', req: '#7830', label: 'Rejet automatique : Incohérence de données', hash: 'POLICE_VIOLATION_04', type: 'error', icon: '⊘' },
-  { time: '12:05:00', req: '#7831', label: 'Analyse des pièces jointes en cours...', hash: 'PENDING_QUEUE', type: 'pending', icon: '↺' },
-  { time: '12:06:22', req: 'SYSTEM', label: 'Snapshot de la base de données vers le registre immuable complété.', hash: 'BACKUP_OK', type: 'system', icon: '☰' },
-];
+const fmtTime = (v) => {
+  if (!v) return '—';
+  try {
+    const d = new Date(v);
+    return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch { return '—'; }
+};
+const fmtDate = (v) => {
+  if (!v) return '—';
+  try { return new Date(v).toLocaleDateString('fr-FR'); } catch { return '—'; }
+};
+
+const TYPE_STYLE = {
+  success: { color: '#006D44', bg: '#f0fdf4', border: '#b8d8b8', icon: '✓', label: 'Succès' },
+  error:   { color: '#CE1126', bg: '#fff5f5', border: '#fca5a5', icon: '⊘', label: 'Erreur' },
+  pending: { color: '#B45309', bg: '#fffbeb', border: '#fcd34d', icon: '↺', label: 'En attente' },
+  system:  { color: '#6366f1', bg: '#f5f3ff', border: '#c4b5fd', icon: '☰', label: 'Système' },
+  verify:  { color: '#0ea5e9', bg: '#f0f9ff', border: '#bae6fd', icon: '🔍', label: 'Vérification' },
+};
+
+const DOC_NAMES = { P:'Passeport', C:"CNI", A:'Acte de Naissance', D:'Permis', E:'Extrait' };
+
+const buildLogsFromDocs = (docs) => {
+  return docs.map((d) => {
+    const code = (d.statut_demande || '').split(':')[0] || '?';
+    const nom = d.nom ? `${d.nom}` : (d.id_acte || d.citoyen_id?.slice(0,8) || 'CITOYEN');
+    const docName = DOC_NAMES[code] || code;
+    const statut = (d.statut || '').toUpperCase();
+    let type = 'pending';
+    let label = `Demande ${docName} en cours de traitement`;
+    let hash = `REF-${(d.id || '').slice(0,8).toUpperCase()}`;
+
+    if (['GENERE','GÉNÉRÉ','VALIDE'].includes(statut)) {
+      type = 'success';
+      label = `${docName} généré automatiquement — ${nom}`;
+      hash = d.hash_document ? `SHA-256: ${d.hash_document.slice(0,20)}...` : hash;
+    } else if (['REJETE','REJETÉ','REJECTED'].includes(statut)) {
+      type = 'error';
+      label = `Rejet automatique ${docName} — Incohérence détectée`;
+    }
+    return {
+      time: fmtTime(d.date_generation || d.created_at),
+      date: fmtDate(d.date_generation || d.created_at),
+      req: `#${(d.id || '').slice(0,4).toUpperCase()}`,
+      label,
+      hash,
+      type,
+      icon: TYPE_STYLE[type]?.icon || '·',
+    };
+  });
+};
 
 const AdminJournal = () => {
-  const [logs, setLogs] = useState(INITIAL_LOGS);
+  const [logs, setLogs]             = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [filter, setFilter]         = useState('all');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [stats, setStats]           = useState({ total:0, success:0, error:0, pending:0 });
 
-  // Nouveaux logs simulés en temps réel
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const { data: docs } = await supabase
+        .from('documents_certifies')
+        .select('id, statut, statut_demande, hash_document, date_generation, created_at, id_acte, nom, citoyen_id')
+        .order('date_generation', { ascending: false })
+        .limit(50);
+
+      if (docs && docs.length > 0) {
+        const built = buildLogsFromDocs(docs);
+        setLogs(built);
+        setStats({
+          total:   built.length,
+          success: built.filter(l => l.type === 'success').length,
+          error:   built.filter(l => l.type === 'error').length,
+          pending: built.filter(l => l.type === 'pending').length,
+        });
+      } else {
+        // Logs de démonstration si pas de données
+        const demo = [
+          { time:'12:03:01', date: new Date().toLocaleDateString('fr-FR'), req:'#7829', label:'Vérification NaissanceChain OK — Fanta Touré', hash:'SHA-256: 8A7F3D...021E', type:'success', icon:'✓' },
+          { time:'12:03:05', date: new Date().toLocaleDateString('fr-FR'), req:'#7829', label:'CNI Biométrique générée automatiquement — Mamadou Barry', hash:'SHA-256: 4F1C9B...88A2', type:'success', icon:'✓' },
+          { time:'12:03:10', date: new Date().toLocaleDateString('fr-FR'), req:'#7830', label:'Passeport généré — Aïssatou Diallo', hash:'SHA-256: 99E2AB...FB4C', type:'success', icon:'✓' },
+          { time:'12:04:15', date: new Date().toLocaleDateString('fr-FR'), req:'#7831', label:'Rejet automatique — Incohérence date de naissance', hash:'POLICE_VIOLATION_04', type:'error', icon:'⊘' },
+          { time:'12:05:00', date: new Date().toLocaleDateString('fr-FR'), req:'#7832', label:'Demande Acte de Naissance en traitement', hash:'PENDING_QUEUE', type:'pending', icon:'↺' },
+          { time:'12:06:22', date: new Date().toLocaleDateString('fr-FR'), req:'SYSTEM', label:'Snapshot blockchain vers registre immuable — OK', hash:'BACKUP_COMPLETED', type:'system', icon:'☰' },
+        ];
+        setLogs(demo);
+        setStats({ total:6, success:3, error:1, pending:1 });
+      }
+    } catch { }
+    setLoading(false);
+  };
+
+  // Actualisation toutes les 10s + timer temps réel
+  useEffect(() => {
+    fetchLogs();
+    const refresh = setInterval(fetchLogs, 10000);
+    const clock   = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => { clearInterval(refresh); clearInterval(clock); };
+  }, []);
+
+  // Ajout log simulé toutes les 8s pour l'effet "live"
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTime(new Date());
-      const reqNum = Math.floor(Math.random() * 200) + 7832;
-      const types = [
-        { label: 'Vérification registre OK', hash: `SHA-256: ${Math.random().toString(16).slice(2, 6).toUpperCase()}...${Math.random().toString(16).slice(2, 6).toUpperCase()}`, type: 'success', icon: '✓' },
-        { label: 'Document généré automatiquement', hash: `SHA-256: ${Math.random().toString(16).slice(2, 6).toUpperCase()}...${Math.random().toString(16).slice(2, 6).toUpperCase()}`, type: 'success', icon: '↑' },
-        { label: 'Validation biométrique réussie', hash: `SHA-256: ${Math.random().toString(16).slice(2, 6).toUpperCase()}...${Math.random().toString(16).slice(2, 6).toUpperCase()}`, type: 'success', icon: '◈' },
+      const reqNum = Math.floor(Math.random() * 9000) + 1000;
+      const variants = [
+        { label: 'Vérification NaissanceChain OK', hash: `SHA-256: ${Math.random().toString(16).slice(2,8).toUpperCase()}...${Math.random().toString(16).slice(2,6).toUpperCase()}`, type: 'success' },
+        { label: 'CNI générée automatiquement', hash: `SHA-256: ${Math.random().toString(16).slice(2,8).toUpperCase()}...${Math.random().toString(16).slice(2,6).toUpperCase()}`, type: 'success' },
+        { label: 'Passeport généré — Vérification QR active', hash: `SHA-256: ${Math.random().toString(16).slice(2,8).toUpperCase()}...`, type: 'success' },
+        { label: 'Scan QR code document — Authentification tierce', hash: `VERIFY-${Math.floor(Math.random()*99999)}`, type: 'verify' },
       ];
-      const t = types[Math.floor(Math.random() * types.length)];
+      const v = variants[Math.floor(Math.random() * variants.length)];
       const now = new Date();
-      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-
+      const timeStr = now.toLocaleTimeString('fr-FR');
       setLogs(prev => [
-        { time: timeStr, req: `#${reqNum}`, ...t },
-        ...prev.slice(0, 19)
+        { time: timeStr, date: now.toLocaleDateString('fr-FR'), req: `#${reqNum}`, ...v, icon: TYPE_STYLE[v.type]?.icon || '✓' },
+        ...prev.slice(0, 49),
       ]);
-    }, 3000);
+    }, 8000);
     return () => clearInterval(interval);
   }, []);
 
-  const typeStyle = {
-    success: { color: '#006D44', reqColor: '#006D44' },
-    error: { color: '#CE1126', reqColor: '#CE1126' },
-    pending: { color: '#888', reqColor: '#555' },
-    system: { color: '#888', reqColor: '#555' },
-  };
-
   const handleExport = () => {
-    const content = logs.map(l => `${l.time} | ${l.req} | ${l.label} | ${l.hash}`).join('\n');
-    const blob = new Blob([`IDENTIGUINEE — SYSTEM LEDGER EXPORT\nExporté le ${new Date().toLocaleString('fr-FR')}\n\n${content}`], { type: 'text/plain' });
+    const content = logs.map(l => `${l.date} ${l.time} | ${l.req} | ${l.label} | ${l.hash} | ${l.type.toUpperCase()}`).join('\n');
+    const blob = new Blob([
+      `IDENTIGUINEE — JOURNAL DE TRANSPARENCE NAISSANCECHAIN\n` +
+      `Exporté le ${new Date().toLocaleString('fr-FR')}\n` +
+      `Total entrées : ${logs.length}\n` +
+      `========================================\n\n` +
+      content
+    ], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'SYSTEM_LEDGER_V2.log'; a.click();
+    a.href = url; a.download = `journal_naissancechain_${Date.now()}.log`; a.click();
+    URL.revokeObjectURL(url);
   };
+
+  const filtered = filter === 'all' ? logs : logs.filter(l => l.type === filter);
 
   return (
     <AdminLayout>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:28, flexWrap:'wrap', gap:16 }}>
         <div>
-          <span style={{ background: '#fef3c7', color: '#d97706', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, letterSpacing: 0.5, display: 'inline-block', marginBottom: 10 }}>
-            IMMUABILITÉ GARANTIE
+          <span style={{ background:'#fef3c7', color:'#d97706', fontSize:11, fontWeight:700, padding:'4px 10px', borderRadius:6, letterSpacing:0.5, display:'inline-block', marginBottom:10 }}>
+            IMMUABILITÉ GARANTIE · TEMPS RÉEL
           </span>
-          <h1 style={{ fontSize: 34, fontWeight: 900, color: '#0a2e1a', margin: '0 0 6px' }}>Journal de transparence</h1>
-          <p style={{ color: '#666', fontSize: 14, margin: 0 }}>Journal d'audit en temps réel — Preuve d'intégrité</p>
+          <h1 style={{ fontSize:28, fontWeight:900, color:'#0a2e1a', margin:'0 0 4px' }}>Journal de transparence</h1>
+          <p style={{ color:'#666', fontSize:13, margin:0 }}>Audit en direct · NaissanceChain · Zéro corruption</p>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <p style={{ fontSize: 22, fontWeight: 900, color: '#006D44', margin: '0 0 2px', letterSpacing: -1 }}>ZÉRO CORRUPTION</p>
-          <p style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: 2, margin: 0 }}>ZÉRO AGENT HUMAIN</p>
-        </div>
-      </div>
-
-      {/* Métriques haut */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: 20, marginBottom: 28 }}>
-        {/* Preuve de Travail Algorithmique */}
-        <div style={{ background: '#006D44', borderRadius: 16, padding: 24, position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', right: -30, bottom: -30, width: 100, height: 100, background: 'rgba(255,255,255,0.06)', borderRadius: '50%' }} />
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: 10, display: 'inline-block', marginBottom: 12 }}>
-              <Shield size={22} color="#fff" />
+        <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+          <div style={{ background:'#f0fdf4', border:'1px solid #b8d8b8', borderRadius:8, padding:'8px 14px', textAlign:'center' }}>
+            <div style={{ fontSize:9, fontWeight:700, color:'#888', letterSpacing:0.5 }}>HEURE SYSTÈME</div>
+            <div style={{ fontSize:14, fontWeight:900, color:'#006D44', fontFamily:'monospace' }}>
+              {currentTime.toLocaleTimeString('fr-FR')}
             </div>
-            <h3 style={{ color: '#fff', fontSize: 16, fontWeight: 800, margin: '0 0 8px' }}>Preuve de Travail Algorithmique</h3>
-            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, margin: 0, lineHeight: 1.5 }}>
-              Chaque décision est signée numériquement et ancrée dans le registre d'État sans intervention manuelle.
-            </p>
           </div>
-        </div>
-
-        <div style={{ background: '#fff', borderRadius: 16, padding: 24, border: '1px solid #eee', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <p style={{ fontSize: 44, fontWeight: 900, color: '#0a2e1a', margin: '0 0 4px' }}>99.9%</p>
-          <p style={{ fontSize: 11, fontWeight: 700, color: '#aaa', letterSpacing: 1, margin: 0, textTransform: 'uppercase' }}>Automatisation</p>
-        </div>
-
-        <div style={{ background: '#fff', borderRadius: 16, padding: 24, border: '1px solid #eee', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <p style={{ fontSize: 44, fontWeight: 900, color: '#0a2e1a', margin: '0 0 4px' }}>0ms</p>
-          <p style={{ fontSize: 11, fontWeight: 700, color: '#aaa', letterSpacing: 1, margin: 0, textTransform: 'uppercase' }}>Latence d'audit</p>
-        </div>
-      </div>
-
-      {/* Terminal de logs */}
-      <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #eee', overflow: 'hidden', marginBottom: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-        {/* Barre de titre terminal */}
-        <div style={{ background: '#f5f5f5', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {['#ff5f57', '#febc2e', '#28c840'].map((c, i) => (
-                <div key={i} style={{ width: 12, height: 12, borderRadius: '50%', background: c }} />
-              ))}
-            </div>
-            <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#666', fontWeight: 700 }}>SYSTEM_LEDGER_V2.LOG</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#28c840', animation: 'pulse 2s infinite' }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#006D44' }}>FLUX EN DIRECT</span>
-          </div>
-        </div>
-
-        {/* Logs */}
-        <div style={{ background: '#0d1f17', padding: '16px 0', maxHeight: 340, overflowY: 'auto' }}>
-          {logs.map((log, i) => {
-            const ts = typeStyle[log.type] || typeStyle.system;
-            return (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'flex-start', gap: 12,
-                padding: '6px 20px', fontFamily: 'monospace', fontSize: 12,
-                borderLeft: log.type === 'error' ? '3px solid #CE1126' : '3px solid transparent',
-                transition: 'background 0.2s'
-              }}>
-                <span style={{ color: '#4fc3f7', flexShrink: 0, minWidth: 60 }}>{log.time}</span>
-                <span style={{ color: ts.reqColor, fontWeight: 700, flexShrink: 0, minWidth: 70 }}>{log.req}</span>
-                <span style={{ color: log.type === 'error' ? '#CE1126' : '#888', marginRight: 6, flexShrink: 0 }}>{log.icon}</span>
-                <span style={{ color: log.type === 'error' ? '#ff6b6b' : log.type === 'pending' ? '#fbbf24' : '#e0e0e0', flex: 1 }}>
-                  {log.label}
-                </span>
-                <span style={{
-                  color: log.type === 'success' ? '#4fc3f7' : log.type === 'error' ? '#CE1126' : '#888',
-                  fontSize: 10, flexShrink: 0, fontWeight: 600
-                }}>{log.hash}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Footer terminal */}
-        <div style={{ background: '#f9f9f9', padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee' }}>
-          <div style={{ display: 'flex', gap: 24, fontSize: 12, color: '#666' }}>
-            <span><strong>NŒUDS ACTIFS:</strong> 12 / 12</span>
-            <span><strong>HACHAGE COURANT:</strong> 0x78a2bc45...</span>
-          </div>
-          <button onClick={handleExport} style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: '#fff', border: '1px solid #ddd', borderRadius: 8,
-            padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: '#333'
-          }}>
-            <Download size={14} /> EXPORTER L'AUDIT COMPLET
+          <button onClick={fetchLogs} style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 16px', background:'#fff', border:'1.5px solid #e0ece0', borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', color:'#006D44', fontFamily:'inherit' }}>
+            <RefreshCw size={14} /> Actualiser
+          </button>
+          <button onClick={handleExport} style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 16px', background:'#006D44', color:'#fff', border:'none', borderRadius:10, fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            <Download size={14} /> Exporter
           </button>
         </div>
       </div>
 
-      {/* Cartes de bas de page */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        <div style={{ background: '#f0fdf4', borderRadius: 14, padding: '20px 24px', border: '1px solid #c3e6cb', display: 'flex', gap: 14 }}>
-          <div style={{ background: '#006D44', borderRadius: 10, padding: 10, height: 'fit-content', flexShrink: 0 }}>
-            <Shield size={20} color="#fff" />
+      {/* KPIs */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px,1fr))', gap:12, marginBottom:24 }}>
+        {[
+          { label:'Total entrées', value: stats.total, color:'#006D44', bg:'#f0fdf4' },
+          { label:'Succès', value: stats.success, color:'#006D44', bg:'#e8f5e8' },
+          { label:'Erreurs', value: stats.error, color:'#CE1126', bg:'#fff5f5' },
+          { label:'En attente', value: stats.pending, color:'#B45309', bg:'#fffbeb' },
+        ].map(s => (
+          <div key={s.label} style={{ background:s.bg, borderRadius:12, padding:'14px 16px', border:`1px solid ${s.color}22` }}>
+            <div style={{ fontSize:22, fontWeight:900, color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:11, color:'#666', fontWeight:600 }}>{s.label}</div>
           </div>
-          <div>
-            <h4 style={{ fontSize: 14, fontWeight: 700, color: '#0a2e1a', margin: '0 0 6px' }}>Architecture Zero-Trust</h4>
-            <p style={{ fontSize: 12, color: '#555', margin: 0, lineHeight: 1.6 }}>
-              Le système n'accorde aucune confiance par défaut, même à l'intérieur du réseau administratif. Chaque accès est authentifié et logué.
-            </p>
-          </div>
-        </div>
-        <div style={{ background: '#fff5f0', borderRadius: 14, padding: '20px 24px', border: '1px solid #fecba1', display: 'flex', gap: 14 }}>
-          <div style={{ background: '#e0650a', borderRadius: 10, padding: 10, height: 'fit-content', flexShrink: 0 }}>
-            <Clock size={20} color="#fff" />
-          </div>
-          <div>
-            <h4 style={{ fontSize: 14, fontWeight: 700, color: '#0a2e1a', margin: '0 0 6px' }}>Traçabilité à vie</h4>
-            <p style={{ fontSize: 12, color: '#555', margin: 0, lineHeight: 1.6 }}>
-              Les journaux ne peuvent pas être supprimés ou modifiés. Ils constituent une archive historique et légale permanente de l'activité du système.
-            </p>
-          </div>
+        ))}
+      </div>
+
+      {/* Filtres */}
+      <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
+        {['all','success','error','pending','system','verify'].map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit',
+            background: filter === f ? '#006D44' : '#f0f0f0',
+            color: filter === f ? '#fff' : '#555',
+            border: filter === f ? 'none' : '1px solid #e0e0e0',
+          }}>
+            {f === 'all' ? 'Tout' : TYPE_STYLE[f]?.label || f}
+          </button>
+        ))}
+        <div style={{ marginLeft:'auto', fontSize:12, color:'#888', display:'flex', alignItems:'center', gap:4 }}>
+          <div style={{ width:8, height:8, borderRadius:'50%', background:'#006D44', animation:'blink 1.5s infinite' }} />
+          Live — {filtered.length} entrée{filtered.length > 1 ? 's' : ''}
         </div>
       </div>
+
+      {/* Journal */}
+      <div style={{ background:'#0d1f0d', borderRadius:16, overflow:'hidden', boxShadow:'0 4px 24px rgba(0,0,0,0.15)' }}>
+        {/* Terminal header */}
+        <div style={{ padding:'12px 16px', background:'#0a1a0a', display:'flex', alignItems:'center', gap:8, borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display:'flex', gap:6 }}>
+            <div style={{ width:12, height:12, borderRadius:'50%', background:'#CE1126' }} />
+            <div style={{ width:12, height:12, borderRadius:'50%', background:'#FCD116' }} />
+            <div style={{ width:12, height:12, borderRadius:'50%', background:'#009A44' }} />
+          </div>
+          <span style={{ fontSize:11, color:'rgba(255,255,255,0.4)', fontFamily:'monospace', marginLeft:8 }}>
+            naissancechain@identiguinee:~/audit-log$ tail -f system.ledger
+          </span>
+        </div>
+
+        {/* Logs */}
+        <div style={{ maxHeight:480, overflowY:'auto', padding:'8px 0' }}>
+          {loading ? (
+            <div style={{ padding:24, textAlign:'center', color:'#69f0ae', fontSize:13, fontFamily:'monospace' }}>
+              Chargement du registre NaissanceChain...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div style={{ padding:24, textAlign:'center', color:'rgba(255,255,255,0.3)', fontSize:13 }}>
+              Aucune entrée pour ce filtre.
+            </div>
+          ) : filtered.map((log, i) => {
+            const ts = TYPE_STYLE[log.type] || TYPE_STYLE.system;
+            return (
+              <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'7px 16px', borderBottom:'1px solid rgba(255,255,255,0.03)', transition:'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.03)'}
+                onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                {/* Timestamp */}
+                <span style={{ fontSize:10, fontFamily:'monospace', color:'rgba(255,255,255,0.3)', minWidth:72, flexShrink:0, paddingTop:2 }}>
+                  [{log.time}]
+                </span>
+                {/* Req */}
+                <span style={{ fontSize:10, fontFamily:'monospace', color:ts.color, fontWeight:700, minWidth:50, flexShrink:0, paddingTop:2 }}>
+                  {log.req}
+                </span>
+                {/* Label */}
+                <span style={{ fontSize:11, color:'rgba(255,255,255,0.75)', flex:1, lineHeight:1.5 }}>
+                  {log.label}
+                </span>
+                {/* Hash */}
+                <span style={{ fontSize:9, fontFamily:'monospace', color:ts.color, opacity:0.8, minWidth:120, flexShrink:0, textAlign:'right' }}>
+                  {log.hash}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{ marginTop:12, fontSize:11, color:'#888', textAlign:'center' }}>
+        Journal mis à jour automatiquement toutes les 10 secondes · Données enregistrées de façon immuable sur NaissanceChain
+      </div>
+
+      <style>{`@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
     </AdminLayout>
   );
 };

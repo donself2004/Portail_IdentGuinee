@@ -119,37 +119,39 @@ const DemandForm = () => {
       const hashDoc  = genHash(hashSrc);
       const statusKey = `${docConfig.code}:TERMINEE`;
 
-      const { data: existing } = await supabase
-        .from('documents_certifies')
-        .select('id')
-        .eq('citoyen_id', user.id)
-        .eq('statut', 'GENERE')
-        .ilike('statut_demande', `${docConfig.code}:%`)
-        .maybeSingle();
+      // Vérifier si doc déjà existant (par citoyen_id OU id_acte)
+      let existing = null;
+      if (user.id) {
+        const { data: e1 } = await supabase
+          .from('documents_certifies')
+          .select('id, statut_demande')
+          .eq('citoyen_id', user.id)
+          .eq('statut', 'GENERE')
+          .order('date_generation', { ascending: false })
+          .limit(20);
+        if (e1) {
+          existing = e1.find(d => d.statut_demande && d.statut_demande.startsWith(docConfig.code + ':'));
+        }
+      }
 
       if (existing) {
-        // Réutiliser le document existant
         navigate('/document-genere', {
           state: { documentId: existing.id, type_document: docConfig.key }
         });
         return;
       }
 
+      // Colonnes réelles de documents_certifies:
+      // id, id_acte, citoyen_id, statut_demande, hash_document, qr_code_url, pdf_url, date_generation, statut, created_at
       const { data: inserted, error: insertErr } = await supabase
         .from('documents_certifies')
         .insert([{
-          citoyen_id:    user.id,
-          id_acte:       idActe,
-          nom:           nom,
-          prenom:        prenom,
-          statut:        'GENERE',
-          statut_demande: statusKey,
-          type_document: docConfig.key,
-          hash_document: hashDoc,
-          date_generation: new Date().toISOString().split('T')[0],
-          date_naissance: acteData?.date_naissance || null,
-          lieu_naissance: lieu,
-          genre,
+          citoyen_id:      user.id,
+          id_acte:         idActe,
+          statut:          'GENERE',
+          statut_demande:  statusKey,
+          hash_document:   hashDoc,
+          date_generation: new Date().toISOString(),
         }])
         .select()
         .single();
