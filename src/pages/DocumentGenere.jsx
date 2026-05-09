@@ -64,9 +64,10 @@ const mkPassNum = (acte) => {
 };
 
 // QR Code URL via api.qrserver.com (gratuit, fiable)
-const buildQrUrl = (docId, size = 120) => {
+const buildQrUrl = (docId, hashId = null, size = 120) => {
   const base = typeof window !== 'undefined' ? window.location.origin : 'https://identiguinee.vercel.app';
-  const verifyUrl = `${base}/verify/${docId}`;
+  const verifyId = hashId || docId;
+  const verifyUrl = `${base}/verify/${verifyId}`;
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&ecc=M&data=${encodeURIComponent(verifyUrl)}`;
 };
 
@@ -233,7 +234,7 @@ const SignatureMinistere = ({ ministere = "MATD", long = false, dark = false }) 
 //  PASSEPORT BIOMÉTRIQUE — Design officiel guinéen
 //  Couverture verte, pages intérieures avec MRZ ICAO, zone données
 // ═══════════════════════════════════════════════════════════════
-const PasseportBiometrique = ({ acte, user, documentId }) => {
+const PasseportBiometrique = ({ acte, user, documentId, hash_document }) => {
   const nom    = (acte?.nom    || user?.nom    || 'NOM').toUpperCase();
   const prenom = (acte?.prenom || user?.prenom || 'PRÉNOM').toUpperCase();
   const ddn    = acte?.date_naissance || user?.date_naissance;
@@ -243,7 +244,7 @@ const PasseportBiometrique = ({ acte, user, documentId }) => {
   const nin    = mkNIN(acte);
   const emis   = new Date();
   const expire = new Date(); expire.setFullYear(expire.getFullYear() + 5);
-  const qrUrl  = documentId ? buildQrUrl(documentId, 130) : null;
+  const qrUrl  = documentId ? buildQrUrl(documentId, hash_document, 130) : null;
   const mrz    = buildMRZ(nom, prenom, ddn, expire.toISOString(), numPass, genre);
   const avatarURL = `https://ui-avatars.com/api/?name=${encodeURIComponent(prenom.charAt(0)+' '+nom.charAt(0))}&background=1a3a20&color=fff&bold=true&size=200`;
 
@@ -424,7 +425,7 @@ const PasseportBiometrique = ({ acte, user, documentId }) => {
 //  CARTE NATIONALE D'IDENTITÉ CEDEAO — Design officiel guinéen
 //  Dimensions ID-1 (85.6×54mm), recto/verso, fond vert clair
 // ═══════════════════════════════════════════════════════════════
-const CarteIdentiteCEDEAO = ({ acte, user, documentId }) => {
+const CarteIdentiteCEDEAO = ({ acte, user, documentId, hash_document }) => {
   const nom    = (acte?.nom    || user?.nom    || 'NOM').toUpperCase();
   const prenom = (acte?.prenom || user?.prenom || 'PRÉNOM').toUpperCase();
   const ddn    = acte?.date_naissance || user?.date_naissance;
@@ -433,7 +434,7 @@ const CarteIdentiteCEDEAO = ({ acte, user, documentId }) => {
   const nin    = mkNIN(acte);
   const emis   = new Date();
   const expire = new Date(); expire.setFullYear(expire.getFullYear() + 10);
-  const qrUrl  = documentId ? buildQrUrl(documentId, 100) : null;
+  const qrUrl  = documentId ? buildQrUrl(documentId, hash_document, 100) : null;
   const avatarURL = `https://ui-avatars.com/api/?name=${encodeURIComponent(prenom.charAt(0)+' '+nom.charAt(0))}&background=1a5a30&color=fff&bold=true&size=200`;
 
   const CARD = { width: '100%', maxWidth: 720, fontFamily: 'Arial, sans-serif' };
@@ -622,7 +623,7 @@ const CarteIdentiteCEDEAO = ({ acte, user, documentId }) => {
 //  ACTE DE NAISSANCE — Design officiel guinéen
 //  Format A4, en-tête gouvernemental, sections ENFANT/PÈRE/MÈRE
 // ═══════════════════════════════════════════════════════════════
-const ActeNaissance = ({ acte, user, documentId }) => {
+const ActeNaissance = ({ acte, user, documentId, hash_document }) => {
   const nom    = (acte?.nom    || user?.nom    || 'NOM').toUpperCase();
   const prenom = (acte?.prenom || user?.prenom || 'PRÉNOM').toUpperCase();
   const lieu   = (acte?.lieu_naissance || 'Conakry').toUpperCase();
@@ -636,7 +637,7 @@ const ActeNaissance = ({ acte, user, documentId }) => {
   const numIdNat = (acte?.numero_identifiant_national || mkNIN(acte)).replace(/\D/g,'');
   const today = fmtDateFR(new Date());
   const todayLong = fmtDateFRLong(new Date());
-  const qrUrl = documentId ? buildQrUrl(documentId, 110) : null;
+  const qrUrl = documentId ? buildQrUrl(documentId, hash_document, 110) : null;
 
   const PURPLE = '#5c2d82';
   const LIGHT_PURPLE = '#f5eeff';
@@ -793,7 +794,7 @@ const ActeNaissance = ({ acte, user, documentId }) => {
 //  PERMIS DE CONDUIRE — Design officiel guinéen
 //  Format credit card ID-1, recto/verso, catégories de véhicules
 // ═══════════════════════════════════════════════════════════════
-const PermisConduire = ({ acte, user, documentId }) => {
+const PermisConduire = ({ acte, user, documentId, hash_document }) => {
   const nom    = (acte?.nom    || user?.nom    || 'NOM').toUpperCase();
   const prenom = (acte?.prenom || user?.prenom || 'PRÉNOM').toUpperCase();
   const ddn    = fmtDateFR(acte?.date_naissance || user?.date_naissance);
@@ -801,7 +802,7 @@ const PermisConduire = ({ acte, user, documentId }) => {
   const numPC  = 'GN' + Math.floor(10000000 + Math.random()*89999999);
   const today  = fmtDateFR(new Date());
   const expiry = addYrs(5);
-  const qrUrl  = documentId ? buildQrUrl(documentId, 90) : null;
+  const qrUrl  = documentId ? buildQrUrl(documentId, hash_document, 90) : null;
   const avatarURL = `https://ui-avatars.com/api/?name=${encodeURIComponent(prenom.charAt(0)+' '+nom.charAt(0))}&background=1a2e0d&color=fff&bold=true&size=200`;
 
   const cats = [
@@ -1025,7 +1026,7 @@ const DocumentGenere = () => {
 
   // Résoudre le bon composant
   const renderDocument = () => {
-    const props = { acte, user, documentId };
+    const props = { acte, user, documentId, hash_document: doc?.hash_document };
     const t = (type_document || '').toLowerCase();
     if (t.includes('passeport')) return <PasseportBiometrique {...props} />;
     if (t.includes('acte') || t.includes('naissance') || t.includes('extrait')) return <ActeNaissance {...props} />;

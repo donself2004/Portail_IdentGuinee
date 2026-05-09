@@ -42,14 +42,49 @@ const Verify = () => {
         // ══════════════════════════════════════════════════════
 
         if (targetId) {
-          // Chercher le document certifié par ID
-          const { data: d, error: dErr } = await supabase
-            .from('documents_certifies')
-            .select('*')
-            .eq('id', targetId)
-            .maybeSingle();
+          let d = null;
 
-          if (!dErr && d) {
+          // ── Chercher d'abord par hash_document (QR code encode souvent le hash) ──
+          // On utilise limit(1) car plusieurs docs peuvent partager le même hash (bug DB)
+          const isHash = /^[0-9a-f]{40,}$/.test(targetId);
+          if (isHash) {
+            const hashRes = await supabase
+              .from('documents_certifies')
+              .select('*')
+              .eq('hash_document', targetId)
+              .order('id', { ascending: false })
+              .limit(1);
+            if (!hashRes.error && hashRes.data?.length > 0) {
+              d = hashRes.data[0];
+            }
+          }
+
+          // ── Fallback par ID numérique ──
+          if (!d && !isNaN(targetId) && targetId !== '' && targetId !== 'demo') {
+            const idRes = await supabase
+              .from('documents_certifies')
+              .select('*')
+              .eq('id', parseInt(targetId, 10))
+              .limit(1);
+            if (!idRes.error && idRes.data?.length > 0) {
+              d = idRes.data[0];
+            }
+          }
+
+          // ── Dernier fallback : recherche hash si non numérique ──
+          if (!d && !isHash && targetId !== 'demo') {
+            const hashRes2 = await supabase
+              .from('documents_certifies')
+              .select('*')
+              .eq('hash_document', targetId)
+              .order('id', { ascending: false })
+              .limit(1);
+            if (!hashRes2.error && hashRes2.data?.length > 0) {
+              d = hashRes2.data[0];
+            }
+          }
+
+          if (d) {
             setDoc(d);
 
             // Déduire le type de document
@@ -64,34 +99,24 @@ const Verify = () => {
             };
             setTypeDoc(docNames[code] || d.type_document || 'Document Officiel');
 
-            // Citoyen
+            // ── Citoyen ──
             if (d.citoyen_id) {
-              const { data: c } = await supabase
-                .from('citoyens')
-                .select('nom, prenom, email, telephone')
-                .eq('id', d.citoyen_id)
-                .maybeSingle();
-              if (c) setCitoyen(c);
+              const citRes = await supabase.from('citoyens').select('*').eq('id', d.citoyen_id).limit(1);
+              if (!citRes.error && citRes.data?.[0]) setCitoyen(citRes.data[0]);
             }
 
-            // Acte NaissanceChain
-            const acteId = d.id_acte;
+            // ── Acte NaissanceChain ──
+            const acteId = d.id_acte || d.id_acte_lie;
             if (acteId) {
-              const { data: a } = await supabase
-                .from('naissancechain')
-                .select('*')
-                .eq('id_acte', acteId)
-                .maybeSingle();
-              if (a) setActe(a);
+              const acteRes = await supabase.from('naissancechain').select('*').eq('id_acte', acteId).limit(1);
+              if (!acteRes.error && acteRes.data?.[0]) setActe(acteRes.data[0]);
             }
 
-            // Vérification stricte du statut
-            const statutOk = ['GENERE', 'GÉNÉRÉ', 'VALIDE', 'VALIDATED'].includes(
-              (d.statut || '').toUpperCase().trim()
-            );
-
+            // Valide si statut OK ou si un hash existe (doc enregistré en DB)
+            const hasHash = !!(d.hash_document);
+            const statutOk = ['GENERE', 'GÉNÉRÉ', 'EN_ATTENTE', 'VALIDE', 'VALIDATED'].includes((d.statut || '').toUpperCase().trim());
+            setStatus((statutOk || hasHash) ? 'authentic' : 'invalid');
             clearInterval(timer);
-            setStatus(statutOk ? 'authentic' : 'invalid');
             return;
           }
         }
@@ -103,7 +128,7 @@ const Verify = () => {
             .from('documents_certifies')
             .select('*')
             .eq('id_acte', targetActe)
-            .eq('statut', 'GENERE')
+            .in('statut', ['GENERE', 'EN_ATTENTE', 'VALIDE'])
             .order('date_generation', { ascending: false })
             .limit(1);
 
