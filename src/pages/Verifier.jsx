@@ -177,7 +177,7 @@ const Verifier = () => {
             ['Titulaire', `${acte?.prenom || ''} ${acte?.nom || ''}`],
             ['N° Acte NaissanceChain', id],
             ['Lieu de naissance', acte?.lieu_naissance || '—'],
-            ['Document certifié', `DOC-${doc?.id?.slice(0,8).toUpperCase()}`],
+            ['Document certifié', doc?.id ? `DOC-${String(doc.id).padStart(6, '0')}` : '—'],
             ['Date d\'émission', fmtDate(doc?.date_generation)],
           ].map(([l, v]) => (
             <div key={l} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 14px', background:'#f8fdf8', borderRadius:10, border:'1px solid #e0f0e0', marginBottom:8 }}>
