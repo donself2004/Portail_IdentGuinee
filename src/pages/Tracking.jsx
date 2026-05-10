@@ -88,7 +88,7 @@ const Tracking = () => {
       if (!isNaN(cid)) {
         const { data, error } = await supabase
           .from('documents_certifies')
-          .select('id, id_acte, statut_demande, statut, created_at, date_generation, type_document, citoyen_id')
+          .select('*')
           .eq('citoyen_id', cid)
           .order('created_at', { ascending: false });
         if (!error && data && data.length > 0) results.push(...data);
@@ -101,7 +101,7 @@ const Tracking = () => {
       try {
         const { data } = await supabase
           .from('documents_certifies')
-          .select('id, id_acte, statut_demande, statut, created_at, date_generation, type_document, citoyen_id')
+          .select('*')
           .eq('id_acte', idActe)
           .order('created_at', { ascending: false });
         if (data && data.length > 0) results.push(...data);
@@ -113,7 +113,7 @@ const Tracking = () => {
       try {
         const { data, error } = await supabase
           .from('documents_certifies')
-          .select('id, id_acte, statut_demande, statut, created_at, date_generation, type_document, citoyen_id')
+          .select('*')
           .order('created_at', { ascending: false })
           .limit(200);
 
