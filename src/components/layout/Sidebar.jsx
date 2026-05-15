@@ -95,9 +95,7 @@ const Sidebar = ({ open, onClose }) => {
         <div style={{ fontSize: 8, color: 'var(--text-faint)', textAlign: 'center', letterSpacing: 1, textTransform: 'uppercase', marginTop: 2 }}>
           Travail · Justice · Solidarité
         </div>
-        <div style={{ fontSize: 8, color: 'var(--text-faint)', textAlign: 'center', marginTop: 4, opacity: 0.6 }}>
-          NaissanceChain v1.0 · MIABE 2026
-        </div>
+
       </div>
     </aside>
   );

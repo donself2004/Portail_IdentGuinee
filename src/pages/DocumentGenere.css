@@ -449,14 +449,52 @@
 
 /* ── IMPRESSION ── */
 @media print {
+  /* ── Masquer tout sauf le document ── */
   .layout-wrapper, .sidebar-root, .header-root, .doc-top-bar,
   .doc-wallet-panel, .doc-hash-bar, .breadcrumbs,
-  .doc-modal-overlay, button { display: none !important; }
-  .doc-print-zone {
-    box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important;
+  .doc-modal-overlay, button, nav, aside,
+  .doc-actions-bar, .doc-page-actions { display: none !important; }
+
+  /* ── Reset page navigateur ── */
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm;
   }
-  .main-content, body, html { background: white !important; margin: 0 !important; padding: 0 !important; }
-  .cni-card, .passport-wrap, .acte-outer, .permis-wrap { max-width: 100% !important; }
+
+  /* ── Supprimer header/footer navigateur (URL, date, numéro de page) ── */
+  html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body, html {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* ── Zone d'impression : plein écran ── */
+  .doc-print-zone {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    page-break-inside: avoid;
+  }
+
+  /* ── Conteneurs documents : pleine largeur ── */
+  .cni-card, .passport-wrap, .acte-outer, .permis-wrap {
+    max-width: 100% !important;
+    width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* ── Forcer couleurs d'impression ── */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 
 /* ═══════════════════════════════════════════════════════

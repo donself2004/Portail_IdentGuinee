@@ -13,7 +13,7 @@ const Services = () => {
           title: "Carte d'Identité",
           documentType: "Carte d'Identité",
           description: "Nouvelle génération avec puce électronique sécurisée et biométrie intégrée.",
-          note: "15,000 GNF • Validité 10 ans"
+          note: "100,000 GNF • Validité 10 ans"
         },
         {
           iconType: "passport",

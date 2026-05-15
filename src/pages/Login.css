@@ -295,7 +295,55 @@
 /* ── Responsive ── */
 @media (max-width: 860px) {
   .login-visual { display: none; }
-  .login-form-panel { padding: 32px 24px; }
+  .login-page { min-height: 100dvh; }
+
+  /* Panneau droit : colonne verticale plein écran */
+  .login-form-panel {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 20px 16px 32px;
+    overflow-y: auto;
+  }
+
+  /* form-card prend toute la largeur */
+  .login-form-card {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  /* ── Mini header mobile ── */
+  .login-mobile-header {
+    display: flex !important;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #004d30 0%, #006D44 60%, #009A44 100%);
+    border-radius: 14px;
+    margin-bottom: 20px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .login-mobile-header-flag {
+    width: 44px; height: 44px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-shrink: 0;
+  }
+  .login-mobile-header-text h2 {
+    font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 3px;
+    letter-spacing: -0.3px;
+  }
+  .login-mobile-header-text p {
+    font-size: 10px; color: rgba(255,255,255,0.7); margin: 0;
+    text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;
+    line-height: 1.4;
+  }
+}
+
+@media (min-width: 861px) {
+  .login-mobile-header { display: none !important; }
 }
 
 /* ── Stats responsives sur mobile — affichées sous le formulaire ── */
@@ -311,6 +359,8 @@
     margin-top: 24px;
     border-top: 1px solid var(--border, #eee);
     padding-top: 20px;
+    width: 100%;
+    box-sizing: border-box;
   }
   .login-stat-mobile-card {
     display: flex;
@@ -333,6 +383,14 @@
   }
   .login-stat-mobile-label {
     font-size: 11px; color: var(--text-muted, #666);
+  }
+}
+
+
+/* ── Sur mobile : masquer le titre "Bienvenue sur IdentiGuinée" (déjà dans le header vert) ── */
+@media (max-width: 860px) {
+  .login-form-header {
+    display: none;
   }
 }
 

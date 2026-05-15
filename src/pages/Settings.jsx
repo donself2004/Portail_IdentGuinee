@@ -191,6 +191,7 @@ const Settings = () => {
                     <div className="input-field">
                       <label htmlFor="field-prenom"><User size={14} /> PRÉNOM</label>
                       <input
+                        id="field-prenom" name="prenom"
                         type="text"
                         value={formData.prenom}
                         onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
@@ -200,6 +201,7 @@ const Settings = () => {
                     <div className="input-field">
                       <label htmlFor="field-nom"><User size={14} /> NOM</label>
                       <input
+                        id="field-nom" name="nom"
                         type="text"
                         value={formData.nom}
                         onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
@@ -212,6 +214,7 @@ const Settings = () => {
                     <div className="input-field" style={{ width: '100%' }}>
                       <label htmlFor="field-email-settings"><Mail size={14} /> EMAIL</label>
                       <input
+                        id="field-email-settings" name="email"
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -222,8 +225,9 @@ const Settings = () => {
 
                   <div className="input-group-row">
                     <div className="input-field" style={{ width: '100%' }}>
-                      <label htmlFor="field-telephone"><Phone size={14} /> TÉLÉPHONE</label>
+                      <label htmlFor="field-tel-settings"><Phone size={14} /> TÉLÉPHONE</label>
                       <input
+                        id="field-tel-settings" name="telephone"
                         type="text"
                         placeholder="Ex: +224 620 00 00 00"
                         value={formData.telephone}
@@ -236,6 +240,7 @@ const Settings = () => {
                     <div className="input-field" style={{ width: '100%' }}>
                       <label htmlFor="field-adresse"><MapPin size={14} /> ADRESSE</label>
                       <input
+                        id="field-adresse" name="adresse"
                         type="text"
                         placeholder="Quartier, Commune, Ville"
                         value={formData.adresse}
@@ -248,6 +253,7 @@ const Settings = () => {
                     <div className="input-field" style={{ width: '100%' }}>
                       <label htmlFor="field-ddn"><Calendar size={14} /> DATE DE NAISSANCE</label>
                       <input
+                        id="field-ddn" name="date_naissance"
                         type="date"
                         value={formData.date_naissance}
                         onChange={(e) => setFormData({ ...formData, date_naissance: e.target.value })}
@@ -264,8 +270,9 @@ const Settings = () => {
 
                   <div className="input-group-row">
                     <div className="input-field">
-                      <label htmlFor="field-password"><Lock size={14} /> MOT DE PASSE ACTUEL</label>
+                      <label htmlFor="field-current-password"><Lock size={14} /> MOT DE PASSE ACTUEL</label>
                       <input
+                        id="field-current-password" name="current-password"
                         type="password"
                         placeholder="Requis pour modifier le mot de passe"
                         value={formData.currentPassword}
@@ -273,8 +280,9 @@ const Settings = () => {
                       />
                     </div>
                     <div className="input-field">
-                      <label htmlFor="field-password"><Lock size={14} /> NOUVEAU MOT DE PASSE</label>
+                      <label htmlFor="field-new-password"><Lock size={14} /> NOUVEAU MOT DE PASSE</label>
                       <input
+                        id="field-new-password" name="new-password"
                         type="password"
                         placeholder="Laisser vide pour conserver l'actuel"
                         value={formData.newPassword}

@@ -6,7 +6,6 @@ import {
   Users, FileText, CheckCircle, ArrowRight, Clock
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { GuineaCoatOfArms } from '../lib/guineaCoatOfArms';
 import {
   verifyAdminCredentials,
   verifyAdminSecret,
@@ -155,8 +154,12 @@ const Login = () => {
       {/* ── Panneau gauche ── */}
       <div className="login-visual">
         <div className="login-visual-logo">
-          <div className="login-visual-logo-icon" style={{ background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)' }}>
-            <GuineaCoatOfArms size={38} />
+          <div className="login-visual-logo-icon" style={{ background: 'transparent', border: 'none', overflow: 'hidden', borderRadius: 10, padding: 0 }}>
+            <svg width="52" height="52" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0"  y="0" width="17.3" height="52" fill="#CE1126"/>
+              <rect x="17.3" y="0" width="17.4" height="52" fill="#FCD116"/>
+              <rect x="34.7" y="0" width="17.3" height="52" fill="#009A44"/>
+            </svg>
           </div>
           <div>
             <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.7)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 2 }}>
@@ -180,16 +183,7 @@ const Login = () => {
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, marginBottom: 36 }}>
             Plateforme officielle de gestion d'identité numérique de la République de Guinée. Vos documents certifiés via NaissanceChain, sans corruption, accessibles partout.
           </p>
-          {/* Badge officiel */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 24 }}>
-            <div style={{ display: 'flex', height: 20, width: 30, borderRadius: 3, overflow: 'hidden', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
-              <div style={{ flex:1, background:'#CE1126' }}/><div style={{ flex:1, background:'#FCD116' }}/><div style={{ flex:1, background:'#009A44' }}/>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#FCD116', letterSpacing: 0.5 }}>PROJET GN-02 · MIABE HACKATHON 2026</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>Équipe Commit United — Phase Finale</div>
-            </div>
-          </div>
+
         </div>
 
         <div className="login-visual-stats">
@@ -211,6 +205,22 @@ const Login = () => {
 
       {/* ── Panneau droit ── */}
       <div className="login-form-panel">
+
+        {/* ── Mini header mobile uniquement ── */}
+        <div className="login-mobile-header">
+          <div className="login-mobile-header-flag">
+            <svg width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0"    y="0" width="14.7" height="44" fill="#CE1126"/>
+              <rect x="14.7" y="0" width="14.6" height="44" fill="#FCD116"/>
+              <rect x="29.3" y="0" width="14.7" height="44" fill="#009A44"/>
+            </svg>
+          </div>
+          <div className="login-mobile-header-text">
+            <h2>IdentiGuinée</h2>
+            <p>République de Guinée · Travail · Justice · Solidarité</p>
+          </div>
+        </div>
+
         <div className="login-form-card">
 
           {/* Header admin secret */}
@@ -255,7 +265,7 @@ const Login = () => {
                       className="field-input"
                       style={{ paddingLeft: 38 }}
                       type="text"
-                      placeholder="Email, téléphone ou N° d'acte"
+                      id="field-identifiant" name="identifiant" placeholder="Email, téléphone ou N° d'acte"
                       value={form.identifiant}
                       onChange={e => set('identifiant', e.target.value)}
                       autoComplete="username"
@@ -273,7 +283,7 @@ const Login = () => {
                       placeholder="••••••••"
                       value={form.password}
                       onChange={e => set('password', e.target.value)}
-                      autoComplete="current-password"
+                      id="field-password" name="password" autoComplete="current-password"
                     />
                     <button type="button" className="field-eye-btn" onClick={() => setShowPassword(v => !v)}>
                       {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -294,7 +304,7 @@ const Login = () => {
                     style={{ paddingLeft: 38 }}
                     type={showSecret ? 'text' : 'password'}
                     placeholder="Clé secrète fournie par votre responsable"
-                    value={form.adminSecret}
+                    id="field-cle-acces" name="cle-acces" value={form.adminSecret}
                     onChange={e => set('adminSecret', e.target.value)}
                     autoFocus
                   />
@@ -317,7 +327,7 @@ const Login = () => {
                       style={{ paddingLeft: 38 }}
                       type="text"
                       placeholder="Ex: GN-102-2024"
-                      value={form.num_acte}
+                      id="field-num-acte" name="num_acte" value={form.num_acte}
                       onChange={e => set('num_acte', e.target.value.toUpperCase())}
                     />
                   </div>
@@ -327,14 +337,14 @@ const Login = () => {
                   <label htmlFor="field-email" className="field-label">Adresse email</label>
                   <div className="field-input-wrap">
                     <Mail size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
-                    <input className="field-input" style={{ paddingLeft: 38 }} type="email" placeholder="votre@email.com" value={form.email} onChange={e => set('email', e.target.value)} />
+                    <input className="field-input" style={{ paddingLeft: 38 }} id="field-email" name="email" type="email" placeholder="votre@email.com" value={form.email} onChange={e => set('email', e.target.value)} />
                   </div>
                 </div>
                 <div className="field-group">
                   <label htmlFor="field-telephone" className="field-label">Téléphone</label>
                   <div className="field-input-wrap">
                     <Mail size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
-                    <input className="field-input" style={{ paddingLeft: 38 }} type="tel" placeholder="+224 6XX XXX XXX" value={form.telephone} onChange={e => set('telephone', e.target.value)} />
+                    <input className="field-input" style={{ paddingLeft: 38 }} id="field-telephone" name="telephone" type="tel" placeholder="+224 6XX XXX XXX" value={form.telephone} onChange={e => set('telephone', e.target.value)} />
                   </div>
                 </div>
                 <div className="field-group">
@@ -345,7 +355,7 @@ const Login = () => {
                       className="field-input"
                       style={{ paddingLeft: 38 }}
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Minimum 8 caractères"
+                      id="field-register-password" name="password" placeholder="Minimum 8 caractères"
                       value={form.password}
                       onChange={e => set('password', e.target.value)}
                     />
@@ -355,14 +365,14 @@ const Login = () => {
                   </div>
                 </div>
                 <div className="field-group">
-                  <label htmlFor="field-password" className="field-label">Confirmer le mot de passe</label>
+                  <label htmlFor="field-password-confirm" className="field-label">Confirmer le mot de passe</label>
                   <div className="field-input-wrap">
                     <Lock size={15} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: '#aaa', pointerEvents: 'none' }} />
                     <input
                       className="field-input"
                       style={{ paddingLeft: 38 }}
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Répéter le mot de passe"
+                      id="field-password-confirm" name="password-confirm" placeholder="Répéter le mot de passe"
                       value={form.confirmPassword}
                       onChange={e => set('confirmPassword', e.target.value)}
                     />
@@ -418,6 +428,24 @@ const Login = () => {
             <span style={{ fontSize: 12, color: '#2d5a2d', fontWeight: 600 }}>Connexion chiffrée TLS 1.3 — Protection anti-intrusion active</span>
           </div>
         </div>
+
+        {/* ── Stats mobiles affichées en bas sur petit écran ── */}
+        <div className="login-stats-mobile">
+          {[
+            { icon: '👤', value: stats.citoyens,  label: 'Citoyens enregistrés' },
+            { icon: '📄', value: stats.documents, label: 'Documents générés' },
+            { icon: '✅', value: stats.tauxVerif, label: 'Taux vérification' },
+          ].map((s, i) => (
+            <div key={i} className="login-stat-mobile-card">
+              <div className="login-stat-mobile-icon">{s.icon}</div>
+              <div>
+                <div className="login-stat-mobile-value">{s.value}</div>
+                <div className="login-stat-mobile-label">{s.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
       </div>
     </div>
   );
